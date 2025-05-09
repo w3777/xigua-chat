@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 // 引入组件
 import Login from '@/views/Login.vue';
-// import Chat from '@/views/Chat.vue';
+import Register from '@/views/Register.vue';
 
 const routes = [
     {
@@ -14,12 +14,11 @@ const routes = [
         name: 'Login',
         component: Login
     },
-    // {
-    //     path: '/chat',
-    //     name: 'Chat',
-    //     component: Chat
-    // },
-    // 可以根据需要添加更多路由
+    {
+        path: '/register',
+        name: 'Register',
+        component: Register
+    }
 ];
 
 const router = createRouter({

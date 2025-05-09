@@ -64,7 +64,7 @@ export default {
         };
 
         try {
-          const response = await this.$axios.post('http://localhost:8090/client/user/login', requestData);
+          const response = await this.$axios.post('/api/client/user/login', requestData);
 
           if (response.data.code === 200) {
             this.$message.success(`登录成功！用户名: ${this.form.username}`);
