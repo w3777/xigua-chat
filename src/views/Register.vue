@@ -1,18 +1,17 @@
 <template>
   <div class="container">
     <div class="form-title">注册</div>
-    <el-form :model="form" ref="formRef" :rules="rules" label-width="100px" @submit.prevent="register">
+    <el-form :model="form" ref="formRef" :rules="rules" @submit.native.prevent="register">
       <!-- 用户名输入框 -->
-      <el-form-item label="用户名" prop="username">
+      <el-form-item prop="username">
         <el-input v-model="form.username" placeholder="用户名" />
       </el-form-item>
 
-      <!-- 电子邮件输入框与验证码按钮 -->
-      <el-form-item label="电子邮件" prop="email">
-        <div class="input-wrapper">
+      <el-form-item prop="email">
+        <div class="email-input-wrapper">
           <el-input
               v-model="form.email"
-              placeholder="请输入您的邮箱"
+              placeholder="请输入QQ号"
               @input="validateEmail"
               class="email-input"
           />
@@ -20,24 +19,22 @@
         </div>
       </el-form-item>
 
-      <!-- 验证码输入框与发送按钮 -->
-      <el-form-item label="验证码" prop="code">
+      <!-- 验证码输入框 -->
+      <el-form-item prop="code">
         <div class="code-wrapper">
-          <el-input v-model="form.code" placeholder="请输入验证码" class="code-input" />
+          <el-input v-model="form.code" maxlength="6" placeholder="验证码" />
           <el-button
               :disabled="isCodeButtonDisabled"
-              type="success"
               @click="sendEmailCode"
               class="code-btn">
-            发送验证码
+            获取验证码
+            <span v-if="timer > 0" class="timer">({{ timer }}s)</span>
           </el-button>
-          <span v-if="timer > 0" class="timer">{{ timer }}秒</span>
-<!--          <span v-if="emailCodeSent" class="info-message">验证码已发送，请查收邮箱。</span>-->
         </div>
       </el-form-item>
 
       <!-- 密码输入框 -->
-      <el-form-item label="密码" prop="password">
+      <el-form-item prop="password">
         <el-input v-model="form.password" type="password" placeholder="密码" show-password />
       </el-form-item>
 
@@ -49,7 +46,7 @@
 
     <!-- 登录链接 -->
     <div class="switch-link">
-      已有账户？<router-link to="/login">登录</router-link>
+      已有账户，<router-link to="/login">登录</router-link>
     </div>
   </div>
 </template>
@@ -69,34 +66,32 @@ export default {
           { required: true, message: '请输入用户名', trigger: 'blur' }
         ],
         email: [
-          { required: true, message: '请输入电子邮件', trigger: 'blur' }
+          { required: true, message: '请输入QQ号', trigger: 'blur' },
+          { pattern: /^[1-9][0-9]{4,10}$/, message: '请输入正确的QQ号', trigger: 'blur' }
         ],
         code: [
           { required: true, message: '请输入验证码', trigger: 'blur' }
         ],
         password: [
           { required: true, message: '请输入密码', trigger: 'blur' },
-          { min: 6, max: 20, message: '密码长度在 6 到 20 个字符之间', trigger: ['blur', 'change'] }
+          { min: 6, max: 20, message: '密码长度在6到20个字符之间', trigger: ['blur', 'change'] }
         ]
       },
-      isCodeButtonDisabled: false,  // 是否禁用验证码按钮
-      timer: 0,  // 倒计时秒数
-      emailCodeSent: false,  // 是否发送验证码
-      countdownTimer: null,  // 倒计时定时器
+      isCodeButtonDisabled: false,
+      timer: 0,
+      countdownTimer: null
     };
   },
   methods: {
-    // 注册方法
     async register() {
       this.$refs.formRef.validate(async (valid) => {
         if (!valid) {
           this.$message.error('请检查输入的内容');
           return;
         }
-
         const requestData = {
           username: this.form.username,
-          email: this.form.email + '@qq.com',  // 自动补充 @qq.com
+          email: this.form.email + '@qq.com',
           code: this.form.code,
           password: this.form.password
         };
@@ -105,7 +100,7 @@ export default {
           const response = await this.$axios.post('/api/client/user/register', requestData);
           if (response.data.code === 200) {
             this.$message.success('注册成功！');
-            this.$router.push('/login');  // 注册成功后跳转到登录页面
+            this.$router.push('/login');
           } else {
             this.$message.error('注册失败：' + response.data.msg);
           }
@@ -114,127 +109,119 @@ export default {
         }
       });
     },
-
-    // 监听并验证电子邮件输入
     validateEmail() {
-      // 强制补充 @qq.com
-      if (this.form.email && !this.form.email.endsWith('@qq.com')) {
-        this.form.email = this.form.email.split('@')[0];  // 只保留 @qq.com 之前的部分
+      if (this.form.email && this.form.email.includes('@')) {
+        this.form.email = this.form.email.split('@')[0];
       }
     },
-
-    // 发送电子邮件验证码
     async sendEmailCode() {
       if (!this.form.email) {
-        this.$message.error('请输入电子邮件');
-        return;
-      }
-      const regex = /^[1-9][0-9]{4,10}$/;
-      if (!regex.test(this.form.email)) {
-        this.$message.error('请输入正确的QQ号');
+        this.$message.error('请输入QQ号');
         return;
       }
 
       const email = this.form.email + '@qq.com';  // 自动补充 @qq.com
-
-      // 调用后端接口发送验证码
-      this.startCountdown()
-      // try {
-      //   const response = await this.$axios.post('/api/client/email/send?email=' + email);
-      //   if (response.data.code === 200) {
-      //     this.emailCodeSent = true;  // 标记验证码已发送
-      //     this.startCountdown();  // 启动倒计时
-      //   } else {
-      //     this.$message.error('发送验证码失败：' + response.data.msg);
-      //   }
-      // } catch (error) {
-      //   this.$message.error('发送验证码失败: ' + error.message);
-      // }
-    },
-
-    // 启动倒计时
-    startCountdown() {
-      if (this.countdownTimer) {
-        clearInterval(this.countdownTimer);  // 清除之前的定时器
+      try {
+        const response = await this.$axios.post('/api/client/email/send?email=' + email);
+        if (response.data.code === 200) {
+          this.startCountdown();  // 启动倒计时
+        } else {
+          this.$message.error('发送验证码失败：' + response.data.msg);
+        }
+      } catch (error) {
+        this.$message.error('发送验证码失败: ' + error.message);
       }
-      this.timer = 60;  // 重置倒计时为60秒
-      this.isCodeButtonDisabled = true;  // 禁用发送验证码按钮
+    },
+    startCountdown() {
+      if (this.countdownTimer) clearInterval(this.countdownTimer);
+      this.timer = 60;
+      this.isCodeButtonDisabled = true;
       this.countdownTimer = setInterval(() => {
         if (this.timer > 0) {
           this.timer--;
         } else {
-          clearInterval(this.countdownTimer);  // 停止倒计时
-          this.isCodeButtonDisabled = false;  // 启用发送验证码按钮
+          clearInterval(this.countdownTimer);
+          this.isCodeButtonDisabled = false;
         }
-      }, 1000)
+      }, 1000);
     }
   },
   beforeDestroy() {
-    if (this.countdownTimer) {
-      clearInterval(this.countdownTimer);  // 清除定时器
-    }
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
   }
 };
 </script>
 
 <style scoped>
-/* 页面整体布局 */
 .container {
-  width: 100%;
-  max-width: 400px;
-  margin: 50px auto;
+  width: 300px;
   padding: 20px;
   background-color: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 80px;
 }
 
-/* 表单标题 */
 .form-title {
+  text-align: center;
   font-size: 24px;
   margin-bottom: 20px;
 }
 
-/* 输入框样式 */
-.el-input {
+.el-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.el-form-item {
   width: 100%;
   margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
 }
 
-/* 邮箱输入框 */
-.email-input {
-  width: 70%;
-  margin-right: 5px;
+.el-input {
+  width: 100%;
 }
 
-/* 邮箱后缀 */
 .email-suffix {
+  margin-top: 5px;
   font-size: 14px;
-  margin-left: 5px;
+  color: #666;
 }
 
-/* 验证码输入框 */
-.code-input {
-  width: 50%;
-  margin-right: 5px;
+.code-wrapper {
+  display: flex;
+  width: 100%;
+  gap: 10px;
 }
 
-/* 按钮样式 */
+.code-btn {
+  white-space: nowrap;
+}
+
+.timer {
+  color: #f56c6c;
+  font-size: 12px;
+}
+
 .submit-btn {
   width: 100%;
   padding: 10px;
-  font-size: 16px;
 }
 
-.el-button {
-  padding: 6px 12px;
-  font-size: 14px;
-}
-
-/* 注册链接 */
 .switch-link {
-  margin-top: 20px;
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  color: #007bff;
 }
 
 .switch-link a {
@@ -246,36 +233,15 @@ export default {
   text-decoration: underline;
 }
 
-/* 信息提示 */
-.info-message {
-  font-size: 14px;
-  color: green;
-  margin-top: 10px;
-}
-
-/* 计时器 */
-.timer {
-  color: red;
-  font-size: 14px;
-  margin-left: 10px;
-}
-
-/* 发送验证码按钮 */
-.code-btn {
-  width: 40%;
-}
-
-/* 验证码与按钮容器 */
-.code-wrapper {
+.email-input-wrapper {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
-/* 响应式调整 */
-@media (max-width: 480px) {
-  .container {
-    padding: 15px;
-  }
+.email-suffix {
+  margin-left: 8px;
+  color: #666;
+  white-space: nowrap;
 }
 </style>
