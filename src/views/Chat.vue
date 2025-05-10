@@ -20,8 +20,12 @@
       <div class="menu-item">
         <img src="@/static/icons/my.png" alt="我的" @click="goToProfile" />
       </div>
-      <div class="menu-item settings" @click="goToSettings">
+      <div class="menu-item settings" @click.stop="openSettingsMenu">
         <i class="icon-settings">⚙️</i>
+        <!-- 新增：设置菜单（固定在底部） -->
+        <div v-if="showSettingsMenu" class="settings-menu">
+          <div class="setting-item" @click="logout">退出登录</div>
+        </div>
       </div>
     </div>
 
@@ -114,6 +118,9 @@
 <script>
 import ProfileView from './Profile.vue'
 import SettingsView from './Settings.vue'
+import {removeToken} from "@/utils/auth.js";
+import router from "@/router";
+
 export default {
   name: 'WeChatApp',
   components: {
@@ -122,17 +129,34 @@ export default {
   },
   data() {
     return {
-      currentView: 'chat' // 默认显示聊天界面
+      // 默认显示聊天界面
+      currentView: 'chat',
+      // 新增：控制菜单显示
+      showSettingsMenu: false
     }
   },
   methods: {
+    // 切换到不同的视图
     setCurrentView(view) {
       console.log('切换到：', view)
       this.currentView = view
     },
+
+    // 跳转到个人资料
     goToProfile() {
       this.setCurrentView('profile');
     },
+
+    // 打开/关闭设置菜单
+    openSettingsMenu() {
+      this.showSettingsMenu = !this.showSettingsMenu;
+    },
+
+    // 退出登录
+    logout() {
+      removeToken();
+      router.push('/login');
+    }
   }
 }
 </script>
@@ -194,7 +218,7 @@ export default {
 
 /* 左侧联系人列表样式 */
 .contact-list {
-  width: 250px;
+  width: 30%;
   background: #eee;
   border-right: 1px solid #ddd;
   display: flex;
@@ -432,5 +456,54 @@ export default {
 .main-content {
   display: flex;
   flex: 1;
+}
+
+.settings {
+  position: relative;
+}
+
+.settings-menu {
+  position: absolute;
+  bottom: 50px;  /* 上移10px */
+  left: 10px;
+  width: 120px;  /* 宽度缩小 */
+  background: #fff;
+  border-radius: 6px;  /* 圆角缩小 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);  /* 阴影变淡 */
+  padding: 6px 0;  /* 内边距缩小 */
+  z-index: 100;
+  animation: menu-fade 0.2s ease-out;
+}
+
+@keyframes menu-fade {
+  from {
+    opacity: 0;
+    transform: translateY(5px);  /* 动画幅度减小 */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.setting-item {
+  padding: 8px 12px;  /* 内边距缩小 */
+  font-size: 13px;  /* 字体缩小 */
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s;  /* 动画加快 */
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;  /* 行高优化 */
+}
+
+.setting-item:hover {
+  background-color: #f5f5f5;  /* 悬停色变浅 */
+}
+
+/* 保持齿轮图标基础样式 */
+.menu-item.settings {
+  margin-top: auto;
+  margin-bottom: 15px;  /* 底部间距减小 */
 }
 </style>

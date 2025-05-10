@@ -3,87 +3,103 @@
     <!-- 头部 -->
     <div class="profile-header">
       <div class="back-button" @click="$emit('back')">
-        <i class="icon-back">←</i>
+        <img src="@/static/icons/back.png" alt="返回" />
       </div>
       <div class="profile-title">个人信息</div>
     </div>
 
     <!-- 内容区域 -->
-    <div class="profile-content">
-      <!-- 头像区域 -->
-      <div class="profile-section" @click="editAvatar">
-        <div class="section-label">头像</div>
-        <div class="section-value">
-          <div class="avatar-wrapper">
-            <img :src="userInfo.avatar" class="avatar" alt="头像">
-            <i class="edit-icon">✎</i>
+    <div class="profile-main-content">
+      <div class="profile-left">
+        <!-- 头像区域 -->
+        <div class="profile-section" @click="editAvatar">
+          <div class="section-label">头像</div>
+          <div class="section-value">
+            <div class="avatar-wrapper">
+              <img :src="userInfo.avatar" class="avatar" alt="头像">
+              <i class="edit-icon">✎</i>
+            </div>
           </div>
         </div>
+
+        <!-- 表单区域 -->
+        <form @submit.prevent="handleSubmit" class="profile-form">
+          <!-- 昵称 -->
+          <div class="profile-section">
+            <div class="section-label">名字</div>
+            <div class="section-value">
+              <input v-model="formData.username" class="form-input" type="text">
+            </div>
+          </div>
+
+          <!-- 微信号 -->
+          <div class="profile-section">
+            <div class="section-label">微信号</div>
+            <div class="section-value">
+              <input v-model="formData.wechatId" class="form-input" type="text">
+            </div>
+          </div>
+
+          <!-- 更多信息 -->
+          <div class="info-group">
+            <div class="group-title">更多信息</div>
+            <!-- 性别 -->
+            <div class="profile-section">
+              <div class="section-label">性别</div>
+              <div class="section-value">
+                <select v-model="formData.gender" class="form-select">
+                  <option value="male">男</option>
+                  <option value="female">女</option>
+                  <option value="unknown">未知</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 地区 -->
+            <div class="profile-section">
+              <div class="section-label">地区</div>
+              <div class="section-value">
+                <input v-model="formData.region" class="form-input" type="text">
+              </div>
+            </div>
+
+            <!-- 个性签名 -->
+            <div class="profile-section">
+              <div class="section-label">个性签名</div>
+              <div class="section-value">
+                <input v-model="formData.signature" class="form-input" type="text">
+              </div>
+            </div>
+          </div>
+
+          <!-- 保存按钮 -->
+          <div class="save-button-container">
+            <button type="submit" class="save-button">保存</button>
+          </div>
+        </form>
       </div>
 
-      <!-- 表单区域 -->
-      <form @submit.prevent="handleSubmit" class="profile-form">
-        <!-- 昵称 -->
-        <div class="profile-section">
-          <div class="section-label">名字</div>
-          <div class="section-value">
-            <input v-model="formData.username" class="form-input" type="text">
-          </div>
-        </div>
-
-        <!-- 微信号 -->
-        <div class="profile-section">
-          <div class="section-label">微信号</div>
-          <div class="section-value">
-            <input v-model="formData.wechatId" class="form-input" type="text">
-          </div>
-        </div>
-
-        <!-- 更多信息 -->
-        <div class="info-group">
-          <div class="group-title">更多信息</div>
-          <!-- 性别 -->
-          <div class="profile-section">
-            <div class="section-label">性别</div>
-            <div class="section-value">
-              <select v-model="formData.gender" class="form-select">
-                <option value="male">男</option>
-                <option value="female">女</option>
-                <option value="unknown">未知</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- 地区 -->
-          <div class="profile-section">
-            <div class="section-label">地区</div>
-            <div class="section-value">
-              <input v-model="formData.region" class="form-input" type="text">
-            </div>
-          </div>
-
-          <!-- 个性签名 -->
-          <div class="profile-section">
-            <div class="section-label">个性签名</div>
-            <div class="section-value">
-              <input v-model="formData.signature" class="form-input" type="text">
-            </div>
-          </div>
-        </div>
-
-        <!-- 保存按钮 -->
-        <div class="save-button-container">
-          <button type="submit" class="save-button">保存</button>
-        </div>
-      </form>
+      <div class="profile-right">
+        <!-- 头像编辑器 -->
+        <AvatarEditorView
+            v-if="showAvatarEditor"
+            :initialImage="avatarImage"
+            @confirm="handleAvatarConfirm"
+            @back="handleCloseEditor"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import {getUserInfo} from "@/api/user.js";
+import AvatarEditorView from "./AvatarEditor.vue";
 
 export default {
+  components: {
+    AvatarEditorView
+  },
   data() {
     return {
       formData: {
@@ -95,7 +111,8 @@ export default {
       },
       userInfo: {
         avatar: "111"
-      }
+      },
+      showAvatarEditor: false
     }
   },
   created() {
@@ -103,8 +120,7 @@ export default {
   },
   methods: {
     editAvatar() {
-      console.log('编辑头像')
-      // 实际项目中这里可以调用图片选择组件
+      this.showAvatarEditor = true;
     },
     async getUserInfo() {
       // 调用回显接口获取用户信息
@@ -128,6 +144,18 @@ export default {
       console.log('表单已提交', this.formData)
       // 实际项目中这里可以调用API保存到服务器
       this.$toast('个人信息已保存')
+    },
+    // 关闭头像编辑器
+    closeAvatarEditor() {
+      this.showAvatarEditor = false;
+    },
+    // 处理头像确认
+    handleAvatarConfirm(newAvatar) {
+      this.userInfo.avatar = newAvatar;
+      this.closeAvatarEditor();
+    },
+    handleCloseEditor() {
+      this.showAvatarEditor = false;
     }
   }
 }
@@ -135,6 +163,7 @@ export default {
 
 <style scoped>
 .profile-container {
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -142,11 +171,11 @@ export default {
 }
 
 .profile-header {
+  width: 30%;
   height: 44px;
   background-color: #ededed;
   display: flex;
   align-items: center;
-  padding: 0 15px;
   position: relative;
 }
 
@@ -155,6 +184,23 @@ export default {
   color: #07C160;
   margin-right: 15px;
   cursor: pointer;
+  position: relative;
+  display: inline-block;
+  padding: 0 15px;
+}
+
+.back-button:hover::after {
+  content: "返回";
+  position: absolute;
+  left: 50%;
+  bottom: -25px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .icon-back {
@@ -171,9 +217,21 @@ export default {
   transform: translateX(-50%);
 }
 
-.profile-content {
-  flex: 1;
-  overflow-y: auto;
+.profile-main-content {
+  display: flex; /* 启用flex布局 */
+  flex: 1; /* 占据剩余空间 */
+  overflow: hidden; /* 防止内容溢出 */
+}
+
+.profile-left {
+  width: 30%;
+  height: 100%;
+  border-right: 1px solid #ddd;
+}
+
+.profile-right {
+  width: 70%;
+  height: 100%;
 }
 
 .profile-section {

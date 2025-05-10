@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ElNotification , ElMessageBox, ElMessage } from 'element-plus'
 import { getToken } from '@/utils/auth'
 import errorCode from '@/utils/errorCode'
+import router from '@/router'
 
 // 是否显示重新登录
 export let isRelogin = { show: false };
@@ -28,6 +29,7 @@ service.interceptors.request.use(config => {
         const token = getToken();
         if (!token) {
             // 如果未登录且不是白名单路由，跳转到登录页
+            router.push('/login')
             return Promise.reject(new Error('请先登录'));
         }
 

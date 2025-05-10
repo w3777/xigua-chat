@@ -25,3 +25,11 @@ export function getUserInfo() {
         method: 'get'
     })
 }
+
+// 上传头像
+export function uploadAvatar(data) {
+    return request({
+        url: '/client/user/uploadAvatar?avatar=' + data,
+        method: 'post'
+    })
+}
