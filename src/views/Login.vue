@@ -27,6 +27,9 @@
 </template>
 
 <script>
+import {login} from "@/api/user.js";
+import {setToken} from "@/utils/auth.js";
+
 export default {
   data() {
     return {
@@ -57,17 +60,14 @@ export default {
           password: this.form.password
         };
 
-        try {
-          const response = await this.$axios.post('/api/client/user/login', requestData);
-
-          if (response.data.code === 200) {
-            this.$message.success(`登录成功！用户名: ${this.form.username}`);
-            this.$router.push('/chat');
-          } else {
-            this.$message.error('登录失败：' + response.data.msg);
-          }
-        } catch (error) {
-          this.$message.error('登录请求失败: ' + error.message);
+        const response = await login(requestData);
+        console.log(response)
+        if (response.code === 200) {
+          this.$message.success(`登录成功！用户名: ${this.form.username}`);
+          this.$router.push('/chat');
+          setToken(response.data)
+        } else {
+          this.$message.error('登录失败：' + response.data.msg);
         }
       });
     }

@@ -17,88 +17,123 @@
       <div class="menu-item">
         <i class="icon-moments">📱</i>
       </div>
-      <div class="menu-item settings">
+      <div class="menu-item">
+        <img src="@/static/icons/my.png" alt="我的" @click="goToProfile" />
+      </div>
+      <div class="menu-item settings" @click="goToSettings">
         <i class="icon-settings">⚙️</i>
       </div>
     </div>
 
-    <!-- 左侧联系人列表 -->
-    <div class="contact-list">
-      <div class="search-bar">
-        <input type="text" placeholder="搜索">
-        <span class="back-btn">+</span>
-      </div>
-
-      <div class="contact active">
-        <div class="avatar">郝</div>
-        <div class="info">
-          <div class="name">郝宇恒</div>
-          <div class="last-msg">在吗</div>
-        </div>
-        <div class="time">14:30</div>
-      </div>
-
-      <div class="contact">
-        <div class="avatar">西瓜</div>
-        <div class="info">
-          <div class="name">西瓜</div>
-          <div class="last-msg">[动画表情]</div>
-        </div>
-        <div class="time">18:25</div>
-      </div>
-    </div>
-
-    <!-- 右侧聊天窗口 -->
-    <div class="chat-window">
-      <!-- 聊天标题栏 -->
-      <div class="chat-header">
-        <div class="chat-title">郝宇恒</div>
-        <div class="chat-actions">
-          <i class="icon-action">...</i>
-        </div>
-      </div>
-
-      <!-- 聊天内容区域 -->
-      <div class="messages">
-        <div class="message received">
-          <div class="content">你好</div>
-        </div>
-        <div class="message received">
-          <div class="content">在吗</div>
-        </div>
-        <div class="message sent">
-          <div class="content">嗯嗯</div>
-        </div>
-        <div class="message sent">
-          <div class="content">在的</div>
-        </div>
-      </div>
-
-      <div class="input-container">
-        <div class="input-tools">
-          <div class="left-tools">
-            <i class="icon-tool">😊</i>
-            <i class="icon-tool">📷</i>
+    <!-- 中间动态内容区域 -->
+    <div class="content-area">
+      <!-- 联系人列表 + 聊天窗口 -->
+      <div v-if="currentView === 'chat'" class="main-content">
+        <!-- 左侧联系人列表 -->
+        <div class="contact-list">
+          <div class="search-bar">
+            <input type="text" placeholder="搜索">
+            <span class="back-btn">+</span>
           </div>
-          <div class="right-tools">
-            <i class="icon-tool">🎤</i>
-            <i class="icon-tool">📹</i>
+
+          <div class="contact active">
+            <div class="avatar">郝</div>
+            <div class="info">
+              <div class="name">郝宇恒</div>
+              <div class="last-msg">在吗</div>
+            </div>
+            <div class="time">14:30</div>
+          </div>
+
+          <div class="contact">
+            <div class="avatar">西瓜</div>
+            <div class="info">
+              <div class="name">西瓜</div>
+              <div class="last-msg">[动画表情]</div>
+            </div>
+            <div class="time">18:25</div>
           </div>
         </div>
 
-        <!-- 输入和发送行 -->
-        <div class="input-row">
-          <input type="text" placeholder="发送消息">
-          <button class="send-btn">发送(S)</button>
+        <!-- 右侧聊天窗口 -->
+        <div class="chat-window">
+          <!-- 聊天标题栏 -->
+          <div class="chat-header">
+            <div class="chat-title">郝宇恒</div>
+            <div class="chat-actions">
+              <i class="icon-action">...</i>
+            </div>
+          </div>
+
+          <!-- 聊天内容区域 -->
+          <div class="messages">
+            <div class="message received">
+              <div class="content">你好</div>
+            </div>
+            <div class="message received">
+              <div class="content">在吗</div>
+            </div>
+            <div class="message sent">
+              <div class="content">嗯嗯</div>
+            </div>
+            <div class="message sent">
+              <div class="content">在的</div>
+            </div>
+          </div>
+
+          <div class="input-container">
+            <div class="input-tools">
+              <div class="left-tools">
+                <i class="icon-tool">😊</i>
+                <i class="icon-tool">📷</i>
+              </div>
+              <div class="right-tools">
+                <i class="icon-tool">🎤</i>
+                <i class="icon-tool">📹</i>
+              </div>
+            </div>
+
+            <!-- 输入和发送行 -->
+            <div class="input-row">
+              <input type="text" placeholder="发送消息">
+              <button class="send-btn">发送(S)</button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- 个人资料组件 -->
+      <ProfileView v-if="currentView === 'profile'" @back="setCurrentView('chat')" />
+
+      <!-- 设置组件 -->
+      <SettingsView v-if="currentView === 'settings'" @back="setCurrentView('chat')" />
     </div>
   </div>
 </template>
 
 <script>
+import ProfileView from './Profile.vue'
+import SettingsView from './Settings.vue'
 export default {
-  name: 'WeChatApp'
+  name: 'WeChatApp',
+  components: {
+    ProfileView,
+    SettingsView
+  },
+  data() {
+    return {
+      currentView: 'chat' // 默认显示聊天界面
+    }
+  },
+  methods: {
+    setCurrentView(view) {
+      console.log('切换到：', view)
+      this.currentView = view
+    },
+    goToProfile() {
+      this.setCurrentView('profile');
+    },
+  }
 }
 </script>
 
@@ -387,5 +422,15 @@ export default {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
 }
 </style>

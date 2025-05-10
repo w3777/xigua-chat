@@ -52,6 +52,9 @@
 </template>
 
 <script>
+import {register} from "@/api/user.js";
+import {sendEmail} from "@/api/email.js";
+
 export default {
   data() {
     return {
@@ -96,16 +99,12 @@ export default {
           password: this.form.password
         };
 
-        try {
-          const response = await this.$axios.post('/api/client/user/register', requestData);
-          if (response.data.code === 200) {
-            this.$message.success('注册成功！');
-            this.$router.push('/login');
-          } else {
-            this.$message.error('注册失败：' + response.data.msg);
-          }
-        } catch (error) {
-          this.$message.error('注册请求失败: ' + error.message);
+        const response = await register(requestData);
+        if (response.code === 200) {
+          this.$message.success('注册成功！');
+          this.$router.push('/login');
+        } else {
+          this.$message.error('注册失败：' + response.data.msg);
         }
       });
     },
@@ -120,16 +119,14 @@ export default {
         return;
       }
 
-      const email = this.form.email + '@qq.com';  // 自动补充 @qq.com
-      try {
-        const response = await this.$axios.post('/api/client/email/send?email=' + email);
-        if (response.data.code === 200) {
-          this.startCountdown();  // 启动倒计时
-        } else {
-          this.$message.error('发送验证码失败：' + response.data.msg);
-        }
-      } catch (error) {
-        this.$message.error('发送验证码失败: ' + error.message);
+      const email = {
+        email: this.form.email + '@qq.com'// 自动补充 @qq.com
+      };
+      const response = await sendEmail(email);
+      if (response.code === 200) {
+        this.startCountdown();  // 启动倒计时
+      } else {
+        this.$message.error('发送验证码失败：' + response.data.msg);
       }
     },
     startCountdown() {
