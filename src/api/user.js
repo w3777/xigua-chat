@@ -33,3 +33,12 @@ export function uploadAvatar(data) {
         method: 'post'
     })
 }
+
+// 更新用户信息
+export function updateUserInfo(data) {
+    return request({
+        url: '/client/user/updateUserInfo',
+        method: 'post',
+        data: data
+    })
+}

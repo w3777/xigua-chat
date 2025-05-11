@@ -97,13 +97,9 @@ export default {
 
     // 获取用户信息
     async fetchUserInfo() {
-      try {
-        const res = await getUserInfo()
-        this.userInfo = res.data || {}
-      } catch (error) {
-        console.error('获取用户信息失败:', error)
-      }
-    },
+      const res = await getUserInfo()
+      this.userInfo = res.data || {}
+    }
   }
 }
 </script>

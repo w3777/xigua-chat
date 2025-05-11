@@ -91,11 +91,11 @@ export default {
     return {
       time: new Date(),
       timer: null,
-      location: '北京市',
+      location: '',
       weather: {
-        condition: '晴',
-        emoji: '🌞',
-        temp: '28'
+        condition: '',
+        emoji: '',
+        temp: ''
       },
     }
   },
@@ -134,30 +134,21 @@ export default {
       alert('功能即将上线，敬请期待！')
     },
     async getLocation() {
-      try {
-        const res = await getLocation()
-        if(res.data.city != ''){
-          this.location = res.data.city
-        }else{
-          this.location = '北京'
-        }
-      } catch (error) {
-        console.error('获取位置失败:', error)
-        this.location = '北京' // 失败时使用默认值
+      const res = await getLocation()
+      if(res.data.city != ''){
+        this.location = res.data.city
+      }else{
+        this.location = '北京'
       }
     },
     async getWeather() {
-      try {
-        // 需要先获取城市名称（接上面的定位）
-        const res = await getWeather( this.location)
+      // 需要先获取城市名称（接上面的定位）
+      const res = await getWeather( this.location)
 
-        this.weather = {
-          condition: res.data.info,
-          emoji: this.getWeatherEmoji(res.data.info),
-          temp: res.data.temperature
-        }
-      } catch (error) {
-        console.error('获取天气失败:', error)
+      this.weather = {
+        condition: res.data.info,
+        emoji: this.getWeatherEmoji(res.data.info),
+        temp: res.data.temperature || 26
       }
     },
 

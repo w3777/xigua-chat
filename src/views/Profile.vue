@@ -2,7 +2,7 @@
   <div class="profile-container">
     <!-- 头部 -->
     <div class="profile-header">
-      <div class="back-button" @click="$emit('back')">
+      <div class="back-button" @click="handleBack">
         <img src="@/static/icons/back.png" alt="返回" />
       </div>
       <div class="profile-title">个人信息</div>
@@ -35,8 +35,13 @@
           <!-- 微信号 -->
           <div class="profile-section">
             <div class="section-label">微信号</div>
-            <div class="section-value">
-              <input v-model="formData.wechatId" class="form-input" type="text">
+            <div class="id-input-container">
+              <span class="id-prefix">xgid_</span>
+              <input
+                  v-model="formData.id"
+                  class="form-input with-prefix"
+                  type="text"
+              >
             </div>
           </div>
 
@@ -47,11 +52,13 @@
             <div class="profile-section">
               <div class="section-label">性别</div>
               <div class="section-value">
-                <select v-model="formData.gender" class="form-select">
-                  <option value="male">男</option>
-                  <option value="female">女</option>
-                  <option value="unknown">未知</option>
-                </select>
+                <div class="sex-select-wrapper">
+                  <select v-model="formData.sex" class="sex-select">
+                    <option value="1">男</option>
+                    <option value="2">女</option>
+                  </select>
+                  <i class="select-arrow">▼</i>
+                </div>
               </div>
             </div>
 
@@ -93,8 +100,9 @@
 </template>
 
 <script>
-import {getUserInfo} from "@/api/user.js";
+import {getUserInfo, updateUserInfo} from "@/api/user.js";
 import AvatarEditorView from "./AvatarEditor.vue";
+import router from "@/router";
 
 export default {
   components: {
@@ -103,12 +111,13 @@ export default {
   data() {
     return {
       formData: {
-        username: '微信用户',
-        wechatId: 'wxid_123456789',
-        gender: 'male',
-        region: '中国 北京',
-        signature: '这个人很懒，什么都没留下'
+        username: '',
+        id: '',
+        sex: null,
+        region: '',
+        signature: ''
       },
+      defaultSignature: '这个人很懒，什么都没留下',
       userInfo: {
         avatar: ""
       },
@@ -133,20 +142,24 @@ export default {
       // 填充表单数据
       this.formData = {
         username: data.username,
-        wechatId: 'xgid_' + data.id,
-        gender: data.gender,
+        id: data.id,
+        sex: data.sex,
         region: data.region,
-        signature: data.signature || '这个人很懒，什么都没留下'
+        signature: data.signature || this.defaultSignature
       };
 
       // 单独设置头像
       this.userInfo.avatar = data.avatar || '';
     },
     handleSubmit() {
-      // 这里可以添加表单验证
-      console.log('表单已提交', this.formData)
-      // 实际项目中这里可以调用API保存到服务器
-      this.$toast('个人信息已保存')
+      // todo 校验
+      this.formData.signature === this.defaultSignature ? '' : this.formData.signature
+      console.log(this.formData)
+      updateUserInfo(this.formData).then(response => {
+        if (response.code === 200) {
+          this.$message.success('更新成功');
+        }
+      })
     },
     // 关闭头像编辑器
     closeAvatarEditor() {
@@ -159,6 +172,10 @@ export default {
     },
     handleCloseEditor() {
       this.showAvatarEditor = false;
+    },
+    handleBack() {
+      // 使用 Vue Router 的 go(-1) 实现返回上一页
+      this.$router.go(-1);
     }
   }
 }
@@ -331,5 +348,90 @@ export default {
 
 .save-button:active {
   background-color: #06AD56;
+}
+
+.sex-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.sex-select {
+  width: 100%;
+  padding: 8px 25px 8px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  color: #333;
+  font-size: 15px;
+  appearance: none;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.sex-select:focus {
+  border-color: #07C160;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #999;
+  font-size: 12px;
+}
+
+/* 下拉选项样式 */
+.sex-select option {
+  padding: 8px;
+  background: white;
+  color: #333;
+}
+
+/* 悬停效果 */
+.sex-select option:hover {
+  background-color: #f5f5f5;
+}
+
+.id-input-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* 前缀样式 */
+.id-prefix {
+  position: absolute;
+  left: 0;
+  padding: 0 5px;
+  color: #888;
+  font-size: 15px;
+  pointer-events: none; /* 防止干扰输入框点击 */
+  z-index: 1;
+}
+
+/* 输入框样式调整 */
+.form-input.with-prefix {
+  padding-left: 40px; /* 根据前缀宽度调整 */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 保持原有输入框基础样式 */
+.form-input {
+  border: none;
+  text-align: right;
+  padding: 5px 0;
+  font-size: 15px;
+  color: #999;
+  background: transparent;
+  outline: none;
+}
+
+/* 聚焦状态 */
+.form-input.with-prefix:focus {
+  padding-left: 45px; /* 保持前缀空间 */
 }
 </style>
