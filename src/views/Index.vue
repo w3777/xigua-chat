@@ -1,104 +1,65 @@
 <template>
-  <!-- 联系人列表 + 聊天窗口 -->
-  <div v-if="currentView === 'chat'" class="main-content">
-    <!-- 左侧联系人列表 -->
-    <div class="contact-list">
-      <div class="search-bar">
-        <input type="text" placeholder="搜索">
-        <span class="back-btn">+</span>
+  <div class="wechat-app">
+    <!-- 左侧菜单栏 -->
+    <div class="menu-bar">
+      <div class="user-avatar">
+        <img
+            :src="userInfo.avatar || defaultAvatar"
+            @error="handleAvatarError"
+            alt="头像"
+            class="avatar-image"
+        >
       </div>
-
-      <div class="contact active">
-        <div class="avatar">郝</div>
-        <div class="info">
-          <div class="name">郝宇恒</div>
-          <div class="last-msg">在吗</div>
-        </div>
-        <div class="time">14:30</div>
+      <div class="menu-item">
+        <img src="@/static/icons/home.png" alt="首页" @click="goToHome" />
       </div>
-
-      <div class="contact">
-        <div class="avatar">西瓜</div>
-        <div class="info">
-          <div class="name">西瓜</div>
-          <div class="last-msg">[动画表情]</div>
+      <div class="menu-item">
+        <img src="@/static/icons/chat.png" alt="首页" @click="goToChat" />
+      </div>
+      <div class="menu-item">
+        <i class="icon-contacts">👥</i>
+      </div>
+      <div class="menu-item">
+        <i class="icon-discover">🌍</i>
+      </div>
+      <div class="menu-item">
+        <i class="icon-moments">📱</i>
+      </div>
+      <div class="menu-item">
+        <img src="@/static/icons/my.png" alt="我的" @click="goToProfile" />
+      </div>
+      <div class="menu-item settings" @click.stop="openSettingsMenu">
+        <i class="icon-settings">⚙️</i>
+        <!-- 新增：设置菜单（固定在底部） -->
+        <div v-if="showSettingsMenu" class="settings-menu">
+          <div class="setting-item" @click="logout">退出登录</div>
         </div>
-        <div class="time">18:25</div>
       </div>
     </div>
 
-    <!-- 右侧聊天窗口 -->
-    <div class="chat-window">
-      <!-- 聊天标题栏 -->
-      <div class="chat-header">
-        <div class="chat-title">郝宇恒</div>
-        <div class="chat-actions">
-          <i class="icon-action">...</i>
-        </div>
-      </div>
-
-      <!-- 聊天内容区域 -->
-      <div class="messages">
-        <div class="message received">
-          <div class="content">你好</div>
-        </div>
-        <div class="message received">
-          <div class="content">在吗</div>
-        </div>
-        <div class="message sent">
-          <div class="content">嗯嗯</div>
-        </div>
-        <div class="message sent">
-          <div class="content">在的</div>
-        </div>
-      </div>
-
-      <div class="input-container">
-        <div class="input-tools">
-          <div class="left-tools">
-            <i class="icon-tool">😊</i>
-            <i class="icon-tool">📷</i>
-          </div>
-          <div class="right-tools">
-            <i class="icon-tool">🎤</i>
-            <i class="icon-tool">📹</i>
-          </div>
-        </div>
-
-        <!-- 输入和发送行 -->
-        <div class="input-row">
-          <input type="text" placeholder="发送消息">
-          <button class="send-btn">发送(S)</button>
-        </div>
-      </div>
+    <!-- 中间动态内容区域 -->
+    <div class="content-area">
+      <router-view></router-view>
     </div>
   </div>
 </template>
 
 <script>
-import ProfileView from './Profile.vue'
-import SettingsView from './Settings.vue'
 import {removeToken} from "@/utils/auth.js";
+import { getUserInfo } from '@/api/user'
+import defaultAvatar from '@/static/images/user_default.png'
 import router from "@/router";
 
 export default {
   name: 'WeChatApp',
   mounted() {
-    // 确保初始加载时路由到chat
-    if (this.$route.path === '/') {
-      this.$router.replace('/chat')
-    }
-  },
-  components: {
-    ProfileView,
-    SettingsView
+    this.fetchUserInfo() // 组件挂载时获取用户信息
   },
   data() {
     return {
-      // 默认显示聊天界面
-      currentView: 'chat',
-      // 新增：控制菜单显示
-      showSettingsMenu: false
+      userInfo: {}, // 存储用户信息
+      defaultAvatar: defaultAvatar, // 默认头像路径
+      showSettingsMenu: false,
     }
   },
   methods: {
@@ -113,6 +74,16 @@ export default {
       this.$router.push('/profile')
     },
 
+    // 跳转到首页
+    goToHome() {
+      this.$router.push('/home')
+    },
+
+    // 跳转到聊天
+    goToChat() {
+      this.$router.push('/chat')
+    },
+
     // 打开/关闭设置菜单
     openSettingsMenu() {
       this.showSettingsMenu = !this.showSettingsMenu;
@@ -122,7 +93,17 @@ export default {
     logout() {
       removeToken();
       router.push('/login');
-    }
+    },
+
+    // 获取用户信息
+    async fetchUserInfo() {
+      try {
+        const res = await getUserInfo()
+        this.userInfo = res.data || {}
+      } catch (error) {
+        console.error('获取用户信息失败:', error)
+      }
+    },
   }
 }
 </script>
@@ -159,6 +140,11 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
 }
 
 .menu-item {

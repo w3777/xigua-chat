@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
-
-// 引入组件
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
+import Index from '@/views/Index.vue';
 import Chat from '@/views/Chat.vue';
+import Profile from '@/views/Profile.vue';
+import Home from '@/views/Home.vue';
 
 const routes = [
     {
@@ -21,9 +22,30 @@ const routes = [
         component: Register
     },
     {
-        path: '/chat',
-        name: 'Chat',
-        component: Chat
+        path: '/',
+        name: 'Index',
+        component: Index,
+        children: [
+            {
+                path: '', // 默认子路由
+                redirect: 'home'
+            },
+            {
+                path: 'home',
+                name: 'Home',
+                component: Home
+            },
+            {
+                path: 'chat',
+                name: 'Chat',
+                component: Chat
+            },
+            {
+                path: 'profile',
+                name: 'Profile',
+                component: Profile
+            }
+        ]
     }
 ];
 

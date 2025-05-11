@@ -45,7 +45,10 @@ import { uploadAvatar, getUserInfo } from '@/api/user'
 
 export default {
   props: {
-    initialImage: String
+    initialImage: {
+      type: String,
+      default: '' // 默认值
+    }
   },
   data() {
     return {

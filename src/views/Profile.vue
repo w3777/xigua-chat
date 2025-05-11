@@ -110,9 +110,10 @@ export default {
         signature: '这个人很懒，什么都没留下'
       },
       userInfo: {
-        avatar: "111"
+        avatar: ""
       },
-      showAvatarEditor: false
+      showAvatarEditor: false,
+      avatarImage: ''
     }
   },
   created() {
@@ -121,6 +122,8 @@ export default {
   methods: {
     editAvatar() {
       this.showAvatarEditor = true;
+      // 传递当前头像
+      this.avatarImage = this.userInfo.avatar;
     },
     async getUserInfo() {
       // 调用回显接口获取用户信息
@@ -130,7 +133,7 @@ export default {
       // 填充表单数据
       this.formData = {
         username: data.username,
-        wechatId: data.wechatId,
+        wechatId: 'xgid_' + data.id,
         gender: data.gender,
         region: data.region,
         signature: data.signature || '这个人很懒，什么都没留下'

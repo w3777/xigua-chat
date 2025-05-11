@@ -64,7 +64,7 @@ export default {
         console.log(response)
         if (response.code === 200) {
           this.$message.success(`登录成功！用户名: ${this.form.username}`);
-          this.$router.push('/chat');
+          this.$router.push('/home');
           setToken(response.data)
         } else {
           this.$message.error('登录失败：' + response.data.msg);
