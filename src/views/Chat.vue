@@ -1,11 +1,11 @@
 <template>
   <!-- 联系人列表 + 聊天窗口 -->
-  <div v-if="currentView === 'chat'" class="main-content">
+  <div class="main-content">
     <!-- 左侧联系人列表 -->
     <div class="contact-list">
       <div class="search-bar">
         <input type="text" placeholder="搜索">
-        <span class="back-btn">+</span>
+        <span class="back-btn" @click="openAddFriend">+</span>
       </div>
 
       <div class="contact active">
@@ -72,14 +72,16 @@
         </div>
       </div>
     </div>
+
+    <!-- 个人资料组件 -->
+    <AddFriend v-if="showAddFriend" @close="closeAddFriend" />
   </div>
 </template>
 
 <script>
-import ProfileView from './Profile.vue'
-import SettingsView from './Settings.vue'
 import {removeToken} from "@/utils/auth.js";
 import router from "@/router";
+import AddFriend from "./AddFriend.vue";
 
 export default {
   name: 'WeChatApp',
@@ -90,38 +92,34 @@ export default {
     }
   },
   components: {
-    ProfileView,
-    SettingsView
+    AddFriend
   },
   data() {
     return {
-      // 默认显示聊天界面
-      currentView: 'chat',
-      // 新增：控制菜单显示
-      showSettingsMenu: false
+      // 添加好友对话框状态
+      showAddFriend: false,
     }
   },
   methods: {
-    // 切换到不同的视图
-    setCurrentView(view) {
-      console.log('切换到：', view)
-      this.currentView = view
-    },
-
     // 跳转到个人资料
     goToProfile() {
       this.$router.push('/profile')
-    },
-
-    // 打开/关闭设置菜单
-    openSettingsMenu() {
-      this.showSettingsMenu = !this.showSettingsMenu;
     },
 
     // 退出登录
     logout() {
       removeToken();
       router.push('/login');
+    },
+
+    // 打开添加好友界面
+    openAddFriend() {
+      this.showAddFriend = true;
+    },
+
+    // 关闭添加好友对话框
+    closeAddFriend() {
+      this.showAddFriend = false;
     }
   }
 }

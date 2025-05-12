@@ -42,3 +42,11 @@ export function updateUserInfo(data) {
         data: data
     })
 }
+
+// 根据用户名查询用户列表
+export function getListByName(username) {
+    return request({
+        url: '/client/user/getListByName?username=' + username,
+        method: 'post',
+    })
+}
