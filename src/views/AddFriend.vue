@@ -40,7 +40,7 @@
                 {{ user.connectStatus === 1 ? '在线' : '离线' }}
               </span>
             </div>
-            <div class="user-id">微信号: {{ user.id }}</div>
+            <div class="user-id">微信号: xg_{{ user.id }}</div>
           </div>
           <button
               class="add-btn"
@@ -67,6 +67,7 @@
 
 <script>
 import {getListByName} from "@/api/user.js";
+import {sendFriendRequest} from "@/api/friendRelation.js";
 
 export default {
   data() {
@@ -98,7 +99,7 @@ export default {
       try {
         const response = await getListByName(this.searchQuery);
         this.searchResults = response.data.map(user => ({
-          id: 'xg_' + user.id,
+          id: user.id,
           name: user.username,
           avatar: user.avatar,
           connectStatus: user.connectStatus,
@@ -114,10 +115,15 @@ export default {
     },
     sendFriendRequest(userId) {
       const user = this.searchResults.find(u => u.id === userId);
-      if (user) {
-        user.requestSent = true;
-        console.log(`好友请求已发送给: ${userId}`);
+      const reqData = {
+        friendId: userId
       }
+      sendFriendRequest(reqData).then(response => {
+        if (response.code === 200) {
+          user.requestSent = true;
+          this.$message.success('添加好友请求已发送');
+        }
+      })
     }
   },
   mounted() {

@@ -17,7 +17,7 @@
         <img src="@/static/icons/chat.png" alt="首页" @click="goToChat" />
       </div>
       <div class="menu-item">
-        <i class="icon-contacts">👥</i>
+        <img src="@/static/icons/friend.png" alt="好友" @click="goToFriend" />
       </div>
       <div class="menu-item">
         <i class="icon-discover">🌍</i>
@@ -99,7 +99,12 @@ export default {
     async fetchUserInfo() {
       const res = await getUserInfo()
       this.userInfo = res.data || {}
-    }
+    },
+
+    // 跳转到好友
+    goToFriend() {
+      this.$router.push('/friend')
+    },
   }
 }
 </script>

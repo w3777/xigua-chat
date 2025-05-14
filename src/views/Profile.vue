@@ -2,9 +2,6 @@
   <div class="profile-container">
     <!-- 头部 -->
     <div class="profile-header">
-      <div class="back-button" @click="handleBack">
-        <img src="@/static/icons/back.png" alt="返回" />
-      </div>
       <div class="profile-title">个人信息</div>
     </div>
 

@@ -5,6 +5,7 @@ import Index from '@/views/Index.vue';
 import Chat from '@/views/Chat.vue';
 import Profile from '@/views/Profile.vue';
 import Home from '@/views/Home.vue';
+import Friend from '@/views/Friend.vue';
 
 const routes = [
     {
@@ -44,6 +45,11 @@ const routes = [
                 path: 'profile',
                 name: 'Profile',
                 component: Profile
+            },
+            {
+                path: 'friend',
+                name: 'Friend',
+                component: Friend
             }
         ]
     }
