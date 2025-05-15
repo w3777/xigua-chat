@@ -19,7 +19,7 @@ const service = axios.create({
 // request拦截器
 service.interceptors.request.use(config => {
     // 定义不需要token的白名单路径
-    const whiteList = ['/client/user/login', '/client/user/register']; // 根据实际路由调整
+    const whiteList = ['/client/user/login', '/client/user/register', '/client/email/send']; // 根据实际路由调整
 
     // 检查当前请求是否在白名单中
     const isWhiteList = whiteList.some(path => config.url.includes(path));
