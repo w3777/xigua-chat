@@ -7,6 +7,7 @@
 
     <!-- 内容区域 -->
     <div class="friend-main-content">
+      <!-- 左侧 好友列表/好友请求 -->
       <div class="friend-left">
         <!-- 好友列表和通知切换 -->
         <div class="friend-tabs">
@@ -25,77 +26,84 @@
           </div>
         </div>
 
-        <!-- 好友列表 -->
-        <div class="friend-list" v-show="activeTab === 'friends'">
-          <div v-if="friends.length === 0" class="no-friends">
-            暂无好友
-          </div>
-          <div class="friend-item" v-for="friend in friends" :key="friend.id" @click="startChat(friend)">
-            <img :src="friend.avatar" alt="头像" class="friend-avatar">
-            <div class="friend-info">
-              <div class="friend-name">{{ friend.username }}</div>
-              <div class="friend-signature">{{ friend.signature || '这个人很懒，什么都没留' }}</div>
+        <div class="friend-content">
+          <!-- 好友列表 -->
+          <div class="friend-list" v-show="activeTab === 'friends'">
+            <div v-if="friends.length === 0" class="no-friends">
+              暂无好友
             </div>
-            <div class="friend-status">
-              <span class="online-dot" :class="{ online: friend.isOnline }"></span>
-              <span class="status-label">{{ friend.isOnline ? '在线' : '离线' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 好友请求列表 -->
-        <div class="request-list" v-show="activeTab === 'requests'">
-          <div v-if="receivedRequests.length === 0 && sentRequests.length === 0" class="no-requests">
-            暂无好友请求
-          </div>
-
-          <!-- 接收到的请求 -->
-          <div class="request-section" v-if="receivedRequests.length > 0">
-            <div class="section-title">收到的请求</div>
-            <div class="request-item" v-for="request in receivedRequests" :key="'receive-'+request.id">
-              <img :src="request.avatar" alt="头像" class="request-avatar">
-              <div class="request-content">
-                <div class="request-info">
-                  <div class="request-name">{{ request.name }}</div>
-                  <div class="request-message">
-                    {{ request.message || '请求添加你为好友' }}
-                  </div>
-                  <div class="request-time">{{ formatTime(request.createTime) }}</div>
-                </div>
-                <div class="request-actions">
-                  <span class="status-pending" v-if="request.status == 0">待验证</span>
-                  <span class="status-accepted" v-else-if="request.status == 1">已通过</span>
-                  <span class="status-rejected" v-else-if="request.status == 2">已拒绝</span>
-                  <button class="accept-btn" @click.stop="handleRequest(request.id, 1)">接受</button>
-                  <button class="reject-btn" @click.stop="handleRequest(request.id, 2)">拒绝</button>
-                </div>
+            <div class="friend-item" v-for="friend in friends" :key="friend.id" @click="startChat(friend)">
+              <img :src="friend.avatar" alt="头像" class="friend-avatar">
+              <div class="friend-info">
+                <div class="friend-name">{{ friend.username }}</div>
+                <div class="friend-signature">{{ friend.signature || '这个人很懒，什么都没留' }}</div>
+              </div>
+              <div class="friend-status">
+                <span class="online-dot" :class="{ online: friend.isOnline }"></span>
+                <span class="status-label">{{ friend.isOnline ? '在线' : '离线' }}</span>
               </div>
             </div>
           </div>
 
-          <!-- 发送的请求 -->
-          <div class="request-section" v-if="sentRequests.length > 0">
-            <div class="section-title">发送的请求</div>
-            <div class="request-item" v-for="request in sentRequests" :key="'send-'+request.id">
-              <img :src="request.avatar" alt="头像" class="request-avatar">
-              <div class="request-content">
-                <div class="request-info">
-                  <div class="request-name">{{ request.name }}</div>
-                  <div class="request-message">
-                    {{ request.message || '我请求添加你为好友' }}
+          <!-- 好友请求列表 -->
+          <div class="request-list" v-show="activeTab === 'requests'">
+            <div v-if="receivedRequests.length === 0 && sentRequests.length === 0" class="no-requests">
+              暂无好友请求
+            </div>
+
+            <!-- 接收到的请求 -->
+            <div class="request-section" v-if="receivedRequests.length > 0">
+              <div class="section-title">收到的请求</div>
+              <div class="request-item" v-for="request in receivedRequests" :key="'receive-'+request.id">
+                <img :src="request.avatar" alt="头像" class="request-avatar">
+                <div class="request-content">
+                  <div class="request-info">
+                    <div class="request-name">{{ request.name }}</div>
+                    <div class="request-message">
+                      {{ request.message || '请求添加你为好友' }}
+                    </div>
+                    <div class="request-time">{{ formatTime(request.createTime) }}</div>
                   </div>
-                  <div class="request-time">{{ formatTime(request.createTime) }}</div>
+                  <div class="request-actions">
+                    <span class="status-pending" v-if="request.status == 0">待验证</span>
+                    <span class="status-accepted" v-else-if="request.status == 1">已通过</span>
+                    <span class="status-rejected" v-else-if="request.status == 2">已拒绝</span>
+                    <button v-if="request.status == 0" class="accept-btn" @click.stop="handleRequest(request.id, 1)">接受</button>
+                    <button v-if="request.status == 0" class="reject-btn" @click.stop="handleRequest(request.id, 2)">拒绝</button>
+                  </div>
                 </div>
-                <div class="request-status">
-                  <span class="status-pending" v-if="request.status == 0">待验证</span>
-                  <span class="status-accepted" v-else-if="request.status == 1">已通过</span>
-                  <span class="status-rejected" v-else-if="request.status == 2">已拒绝</span>
-                  <button v-if="request.status == 2" class="retry-btn" @click.stop="sendRequestAgain(request.id)">重新添加</button>
+              </div>
+            </div>
+
+            <!-- 发送的请求 -->
+            <div class="request-section" v-if="sentRequests.length > 0">
+              <div class="section-title">发送的请求</div>
+              <div class="request-item" v-for="request in sentRequests" :key="'send-'+request.id">
+                <img :src="request.avatar" alt="头像" class="request-avatar">
+                <div class="request-content">
+                  <div class="request-info">
+                    <div class="request-name">{{ request.name }}</div>
+                    <div class="request-message">
+                      {{ request.message || '我请求添加你为好友' }}
+                    </div>
+                    <div class="request-time">{{ formatTime(request.createTime) }}</div>
+                  </div>
+                  <div class="request-status">
+                    <span class="status-pending" v-if="request.status == 0">待验证</span>
+                    <span class="status-accepted" v-else-if="request.status == 1">已通过</span>
+                    <span class="status-rejected" v-else-if="request.status == 2">已拒绝</span>
+                    <button v-if="request.status == 2" class="retry-btn" @click.stop="sendRequestAgain(request.id)">重新添加</button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- 右侧 好友详情 -->
+      <div class="friend-right">
+
       </div>
     </div>
   </div>
@@ -125,23 +133,28 @@ export default {
       this.$router.push(`/chat/${friend.id}`)
     },
     formatTime(date) {
-      const now = new Date()
-      const inputDate = new Date(date)
-      const diff = now - inputDate
-      const dayDiff = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const now = new Date();
+      const inputDate = new Date(date);
+
+      // 将当前日期和输入日期都调整为当天的 00:00:00
+      now.setHours(0, 0, 0, 0);
+      inputDate.setHours(0, 0, 0, 0);
+
+      const diff = now - inputDate;
+      const dayDiff = Math.floor(diff / (1000 * 60 * 60 * 24));
 
       if (dayDiff === 0) {
-        const hours = inputDate.getHours().toString().padStart(2, '0')
-        const minutes = inputDate.getMinutes().toString().padStart(2, '0')
-        return `${hours}:${minutes}`
+        const hours = new Date(date).getHours().toString().padStart(2, '0');
+        const minutes = new Date(date).getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
       } else if (dayDiff === 1) {
-        return '昨天'
+        return '昨天';
       } else if (dayDiff < 7) {
-        return `${dayDiff}天前`
+        return `${dayDiff}天前`;
       } else {
-        const month = inputDate.getMonth() + 1
-        const day = inputDate.getDate()
-        return `${month}月${day}日`
+        const month = inputDate.getMonth() + 1;
+        const day = inputDate.getDate();
+        return `${month}月${day}日`;
       }
     },
     handleRequest(requestId, status) {
@@ -218,18 +231,19 @@ export default {
 
 <style scoped>
 .friend-container {
-  width: 30%;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #fff;
+  background-color: #f5f5f5;
   border-right: 1px solid #e6e6e6;
   overflow: hidden;
 }
 
 .friend-header {
-  height: 56px;
-  background-color: #f5f5f5;
+  width: 30%;
+  height: 44px;
+  background-color: #ededed;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -244,17 +258,15 @@ export default {
 }
 
 .friend-main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: flex; /* 启用flex布局 */
+  flex: 1; /* 占据剩余空间 */
+  overflow: hidden; /* 防止内容溢出 */
 }
 
 .friend-left {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  width: 30%;
+  height: 100%;
+  border-right: 1px solid #ddd;
 }
 
 .friend-tabs {
@@ -262,6 +274,11 @@ export default {
   border-bottom: 1px solid #e6e6e6;
   background-color: #fff;
   flex-shrink: 0;
+  height: 8%;
+}
+
+.friend-content{
+  height: 92%;
 }
 
 .tab-item {
@@ -497,5 +514,10 @@ export default {
 .friend-list::-webkit-scrollbar-track,
 .request-list::-webkit-scrollbar-track {
   background-color: transparent;
+}
+
+.friend-right {
+  width: 70%;
+  height: 100%;
 }
 </style>
