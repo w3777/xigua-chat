@@ -65,11 +65,15 @@
                     <div class="request-time">{{ formatTime(request.createTime) }}</div>
                   </div>
                   <div class="request-actions">
-                    <span class="status-pending" v-if="request.status == 0">待验证</span>
-                    <span class="status-accepted" v-else-if="request.status == 1">已通过</span>
-                    <span class="status-rejected" v-else-if="request.status == 2">已拒绝</span>
-                    <button v-if="request.status == 0" class="accept-btn" @click.stop="handleRequest(request.id, 1)">接受</button>
-                    <button v-if="request.status == 0" class="reject-btn" @click.stop="handleRequest(request.id, 2)">拒绝</button>
+                    <div class="status-container">
+                      <span class="status-pending" v-if="request.status == 0">待验证</span>
+                      <span class="status-accepted" v-if="request.status == 1">已通过</span>
+                      <span class="status-rejected" v-if="request.status == 2">已拒绝</span>
+                    </div>
+                    <div class="action-buttons" v-if="request.status == 0">
+                      <button class="accept-btn" @click.stop="handleRequest(request.id, 1)">接受</button>
+                      <button class="reject-btn" @click.stop="handleRequest(request.id, 2)">拒绝</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -89,10 +93,14 @@
                     <div class="request-time">{{ formatTime(request.createTime) }}</div>
                   </div>
                   <div class="request-status">
-                    <span class="status-pending" v-if="request.status == 0">待验证</span>
-                    <span class="status-accepted" v-else-if="request.status == 1">已通过</span>
-                    <span class="status-rejected" v-else-if="request.status == 2">已拒绝</span>
-                    <button v-if="request.status == 2" class="retry-btn" @click.stop="sendRequestAgain(request.id)">重新添加</button>
+                    <div class="status-container">
+                      <span class="status-pending" v-if="request.status == 0">待验证</span>
+                      <span class="status-accepted" v-if="request.status == 1">已通过</span>
+                      <span class="status-rejected" v-if="request.status == 2">已拒绝</span>
+                    </div>
+                    <button v-if="request.status == 2" class="retry-btn" @click.stop="sendRequestAgain(request.id)">
+                      <i class="icon-refresh"></i> 重新添加
+                    </button>
                   </div>
                 </div>
               </div>
@@ -519,5 +527,70 @@ export default {
 .friend-right {
   width: 70%;
   height: 100%;
+}
+
+.request-actions, .request-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 120px;
+}
+
+.status-container {
+  margin-bottom: 4px;
+  text-align: right;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 状态标签样式 */
+.status-pending,
+.status-accepted,
+.status-rejected {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  display: inline-block;
+}
+
+.status-pending {
+  color: #E6A23C;
+  background-color: #fdf6ec;
+}
+
+.status-accepted {
+  color: #67C23A;
+  background-color: #f0f9eb;
+}
+
+.status-rejected {
+  color: #F56C6C;
+  background-color: #fef0f0;
+}
+
+/* 重新添加按钮样式 */
+.retry-btn {
+  padding: 6px 10px;
+  background-color: #f5f5f5;
+  color: #606266;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #e6e6e6;
+}
+
+.retry-btn .icon-refresh {
+  margin-right: 4px;
+  font-size: 12px;
 }
 </style>
