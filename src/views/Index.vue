@@ -49,17 +49,23 @@ import {removeToken} from "@/utils/auth.js";
 import { getUserInfo } from '@/api/user'
 import defaultAvatar from '@/static/images/user_default.png'
 import router from "@/router";
+import {closeWebSocket, connectWebSocket} from '@/utils/websocket';
+import { setObject, remove } from '@/utils/localStorage';
 
 export default {
   name: 'WeChatApp',
   mounted() {
-    this.fetchUserInfo() // 组件挂载时获取用户信息
+    this.fetchUserInfo().then(() => {
+      // 初始化WebSocket连接
+      this.initWebSocket();
+    })
   },
   data() {
     return {
       userInfo: {}, // 存储用户信息
       defaultAvatar: defaultAvatar, // 默认头像路径
       showSettingsMenu: false,
+      webSocket: null,
     }
   },
   methods: {
@@ -92,12 +98,16 @@ export default {
     // 退出登录
     logout() {
       removeToken();
+      this.closeWebSocket();
+      remove('userInfo');
       router.push('/login');
     },
 
     // 获取用户信息
     async fetchUserInfo() {
       const res = await getUserInfo()
+      // 当前用户信息存储在localStorage中
+      setObject('userInfo', res.data)
       this.userInfo = res.data || {}
     },
 
@@ -105,6 +115,64 @@ export default {
     goToFriend() {
       this.$router.push('/friend')
     },
+
+    initWebSocket() {
+      // 防止重复连接
+      if (this.webSocket) return;
+
+      this.webSocket = connectWebSocket({
+        onOpen: () => {
+          console.log('WebSocket连接成功');
+          // 可以发送初始化消息，如用户身份验证
+          // this.webSocket.send(JSON.stringify({}));
+        },
+        onMessage: (event) => {
+          const data = JSON.parse(event.data);
+          // this.handleWebSocketMessage(data);
+        },
+        onClose: () => {
+          console.log('WebSocket连接关闭');
+          this.webSocket = null;
+          // 可以尝试重连
+          setTimeout(() => this.initWebSocket(), 5000);
+        },
+        onError: (error) => {
+          console.error('WebSocket错误:', error);
+        }
+      });
+    },
+
+    closeWebSocket() {
+      console.log('WebSocket连接关闭')
+      if (this.webSocket) {
+        closeWebSocket()
+      }
+    },
+
+    handleWebSocketMessage(data) {
+      switch(data.type) {
+        case 'notification':
+          this.showNotification(data.message);
+          break;
+        case 'message':
+          this.handleNewMessage(data);
+          break;
+          // 其他消息类型处理...
+      }
+    },
+
+    showNotification(message) {
+      // 实现通知显示逻辑
+      console.log('收到通知:', message);
+    },
+
+    handleNewMessage(message) {
+      // 处理新消息
+      console.log('收到新消息:', message);
+    }
+  },
+  beforeDestroy() {
+    this.closeWebSocket();
   }
 }
 </script>

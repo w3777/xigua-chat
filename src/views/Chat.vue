@@ -2,38 +2,41 @@
   <!-- 联系人列表 + 聊天窗口 -->
   <div class="main-content">
     <!-- 左侧联系人列表 -->
-    <div class="contact-list">
+    <div class="friend-list">
       <div class="search-bar">
         <input type="text" placeholder="搜索">
         <span class="back-btn" @click="openAddFriend">+</span>
       </div>
 
-      <div class="contact active">
-        <div class="avatar">郝</div>
-        <div class="info">
-          <div class="name">郝宇恒</div>
-          <div class="last-msg">在吗</div>
+      <div
+          v-for="friend in friends"
+          :key="friend.userId"
+          class="friend"
+          :class="{ active: currentFriend && currentFriend.userId === friend.userId }"
+          @click="selectFriend(friend.userId)"
+      >
+        <div class="avatar">
+          <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.username">
+          <span v-else>{{ friend.username.charAt(0) }}</span>
         </div>
-        <div class="time">14:30</div>
-      </div>
-
-      <div class="contact">
-        <div class="avatar">西瓜</div>
         <div class="info">
-          <div class="name">西瓜</div>
-          <div class="last-msg">[动画表情]</div>
+          <div class="name">{{ friend.username }}</div>
+          <div class="last-msg">{{ friend.lastMessage }}</div>
         </div>
-        <div class="time">18:25</div>
+        <div class="time">{{ friend.time }}</div>
+        <div v-if="friend.unread > 0" class="unread-badge">
+          {{ friend.unread }}
+        </div>
       </div>
     </div>
 
     <!-- 右侧聊天窗口 -->
-    <div class="chat-window">
+    <div class="chat-window" v-show="showChatWindow">
       <!-- 聊天标题栏 -->
       <div class="chat-header">
-        <div class="chat-title">郝宇恒</div>
+        <div class="chat-title">{{ currentFriend.username || '' }}</div>
         <div class="chat-actions">
-          <i class="icon-action">...</i>
+          <i class="close-chat" @click="closeChatWindow">×</i>
         </div>
       </div>
 
@@ -82,6 +85,7 @@
 import {removeToken} from "@/utils/auth.js";
 import router from "@/router";
 import AddFriend from "./AddFriend.vue";
+import {getLastChat} from "@/api/chatMessage.js";
 
 export default {
   name: 'WeChatApp',
@@ -98,7 +102,29 @@ export default {
     return {
       // 添加好友对话框状态
       showAddFriend: false,
+      // 顶部用户ID (其他页面带过来的)
+      topUserId: null,
+      friends: [],
+      // 当前选中的好友
+      currentFriend: {
+        userId: '',
+        username: '',
+        avatar: '',
+        lastMessage: ''
+      },
+      // 聊天窗口状态
+      showChatWindow: false,
     }
+  },
+  created() {
+    // 通过其他页面直接跟好友聊天，聊天窗口设置为该好友
+    this.topUserId = this.$route.query.friendId;
+    if (this.topUserId !== null && this.topUserId !== undefined && this.topUserId !== '') {
+      this.getLastChat(this.topUserId).then(() => {
+        this.selectFriend(this.topUserId)
+      })
+    }
+
   },
   methods: {
     // 跳转到个人资料
@@ -118,9 +144,36 @@ export default {
     },
 
     // 关闭添加好友对话框
-    closeAddFriend() {
-      this.showAddFriend = false;
-    }
+    getLastChat(topUserId) {
+      return getLastChat(topUserId).then(res => {
+        this.friends = res.data.map(friend => ({
+          userId: friend.userId,
+          username: friend.username,
+          avatar: friend.avatar,
+          lastMessage: friend.lastMessage,
+          connectStatus: friend.connectStatus,
+          time: friend.lastMessageTime,
+          unread: friend.unreadCount
+        }));
+      })
+    },
+
+    // 选择好友
+    selectFriend(userId) {
+      this.currentFriend = this.friends.find(friend => friend.userId === userId);
+      this.showChatWindow = true;
+    },
+
+    // 新增关闭聊天窗口方法
+    closeChatWindow() {
+      this.showChatWindow = false;
+      this.currentFriend = {
+        userId: null,
+        username: '',
+        avatar: '',
+        lastMessage: ''
+      };
+    },
   }
 }
 </script>
@@ -181,7 +234,7 @@ export default {
 }
 
 /* 左侧联系人列表样式 */
-.contact-list {
+.friend-list {
   width: 30%;
   background: #eee;
   border-right: 1px solid #ddd;
@@ -212,14 +265,19 @@ export default {
   cursor: pointer;
 }
 
-.contact {
+.friend {
   display: flex;
   padding: 12px;
   border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
 }
 
-.contact.active {
+/* 悬停效果 */
+.friend:hover {
+  background: #d9d9d9;
+}
+
+.friend.active {
   background: #d9d9d9;
 }
 
@@ -267,6 +325,10 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.chat-window {
+  transition: all 0.3s ease;
 }
 
 .chat-header {
@@ -469,5 +531,44 @@ export default {
 .menu-item.settings {
   margin-top: auto;
   margin-bottom: 15px;  /* 底部间距减小 */
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: #07C160;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-size: 18px;
+  overflow: hidden; /* 新增，防止图片溢出 */
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 保持图片比例填充 */
+}
+
+.avatar span {
+  /* 文字头像的样式 */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-chat {
+  cursor: pointer;
+  font-size: 20px;
+  padding: 5px;
+}
+
+.close-chat:hover {
+  color: #f56c6c;
 }
 </style>

@@ -32,7 +32,7 @@
             <div v-if="friends.length === 0" class="no-friends">
               暂无好友
             </div>
-            <div class="friend-item" v-for="friend in friends" :key="friend.id" @click="startChat(friend)" @contextmenu.prevent="showContextMenu($event, friend.userId)">
+            <div class="friend-item" v-for="friend in friends" :key="friend.id" @click="startChat(friend.userId)" @contextmenu.prevent="showContextMenu($event, friend.userId)">
               <img :src="friend.avatar" alt="头像" class="friend-avatar">
               <div class="friend-info">
                 <div class="friend-name">{{ friend.username }}</div>
@@ -222,7 +222,7 @@ export default {
         friendId:null
       },
       showFriendDetailFlag: false,
-      friendDetail: null,
+      friendDetail: {},
     }
   },
   computed: {
@@ -231,8 +231,13 @@ export default {
     }
   },
   methods: {
-    startChat(friend) {
-      this.$router.push(`/chat/${friend.id}`)
+    startChat(friendId) {
+      this.$router.push({
+        path: 'Chat',
+        query: {
+          "friendId": friendId
+        }
+      })
     },
     formatTime(date) {
       const now = new Date();
