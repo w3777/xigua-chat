@@ -32,7 +32,7 @@
             <div v-if="friends.length === 0" class="no-friends">
               暂无好友
             </div>
-            <div class="friend-item" v-for="friend in friends" :key="friend.id" @click="startChat(friend)">
+            <div class="friend-item" v-for="friend in friends" :key="friend.id" @click="startChat(friend)" @contextmenu.prevent="showContextMenu($event, friend)">
               <img :src="friend.avatar" alt="头像" class="friend-avatar">
               <div class="friend-info">
                 <div class="friend-name">{{ friend.username }}</div>
@@ -113,6 +113,24 @@
       <div class="friend-right">
 
       </div>
+
+      <!-- 右键菜单 -->
+      <div
+          class="context-menu"
+          v-show="contextMenu.visible"
+          :style="{ top: contextMenu.top + 'px', left: contextMenu.left + 'px' }"
+          @mouseleave="hideContextMenu">
+        <div class="menu-item" @click="handleMenuClick('chat')">
+          <i class="icon-message"></i> 发消息
+        </div>
+        <div class="menu-item" @click="handleMenuClick('detail')">
+          <i class="icon-profile"></i> 查看详情
+        </div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" @click="handleMenuClick('delete')">
+          <i class="icon-delete"></i> 删除好友
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -128,7 +146,13 @@ export default {
       friends: [],
       friendRequests: [],
       receivedRequests: [],
-      sentRequests: []
+      sentRequests: [],
+      contextMenu: {
+        visible: false,
+        top: 0,
+        left: 0,
+        selectedFriend: null
+      }
     }
   },
   computed: {
@@ -228,7 +252,59 @@ export default {
           .catch(error => {
             console.error('获取好友列表失败', error)
           })
-    }
+    },
+    showContextMenu(event, friend) {
+      this.contextMenu = {
+        visible: true,
+        top: event.clientY,
+        left: event.clientX,
+        selectedFriend: friend
+      }
+      // 点击其他地方关闭菜单
+      document.addEventListener('click', this.hideContextMenu)
+    },
+    hideContextMenu() {
+      this.contextMenu.visible = false
+      document.removeEventListener('click', this.hideContextMenu)
+    },
+    handleMenuClick(action) {
+      this.hideContextMenu()
+      if (!this.contextMenu.selectedFriend) return
+
+      const friend = this.contextMenu.selectedFriend
+      switch(action) {
+        case 'chat':
+          this.startChat(friend)
+          break
+        case 'detail':
+          this.showFriendDetail(friend)
+          break
+        case 'delete':
+          this.deleteFriend(friend)
+          break
+      }
+    },
+    showFriendDetail(friend) {
+      // 这里可以显示好友详情，可以是在右侧面板或者弹窗
+      console.log('查看好友详情:', friend)
+      // 示例：在右侧面板显示详情
+      // this.activeFriendDetail = friend
+    },
+    deleteFriend(friend) {
+      // 删除好友逻辑
+      this.$confirm(`确定要删除好友 ${friend.username} 吗?`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        // 调用删除好友API
+        console.log('删除好友:', friend.id)
+        // 成功后刷新好友列表
+        this.fetchFriendList()
+      }).catch(() => {
+        // 取消操作
+      })
+    },
   },
   created() {
     this.fetchFriendRequests()
@@ -592,5 +668,51 @@ export default {
 .retry-btn .icon-refresh {
   margin-right: 4px;
   font-size: 12px;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 5px 0;
+  min-width: 160px;
+}
+
+.menu-item {
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item i {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.menu-divider {
+  height: 1px;
+  background-color: #f0f0f0;
+  margin: 5px 0;
+}
+
+.icon-message:before {
+  content: "💬";
+}
+
+.icon-profile:before {
+  content: "👤";
+}
+
+.icon-delete:before {
+  content: "🗑️";
 }
 </style>
