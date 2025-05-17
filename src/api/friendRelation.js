@@ -33,3 +33,11 @@ export function friendVerify(data) {
         data: data
     })
 }
+
+// 好友详情
+export function getFriendDetail(friendId) {
+    return request({
+        url: 'client/friend/relation/getFriendDetail?friendId=' + friendId,
+        method: 'get'
+    })
+}
