@@ -61,9 +61,7 @@ export default {
         };
 
         const response = await login(requestData);
-        console.log(response)
         if (response.code === 200) {
-          this.$message.success(`登录成功！用户名: ${this.form.username}`);
           this.$router.push('/home');
           setToken(response.data)
         } else {

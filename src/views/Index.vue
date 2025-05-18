@@ -10,13 +10,13 @@
             class="avatar-image"
         >
       </div>
-      <div class="menu-item">
-        <img src="@/static/icons/home.png" alt="首页" @click="goToHome" />
+      <div class="menu-item" :class="{ active: activeMenu === 'home' }" @click="goToHome">
+        <img src="@/static/icons/home.png" alt="首页"  />
       </div>
-      <div class="menu-item">
-        <img src="@/static/icons/chat.png" alt="首页" @click="goToChat" />
+      <div class="menu-item" :class="{ active: activeMenu === 'chat' }" @click="goToChat">
+        <img src="@/static/icons/chat.png" alt="聊天" @click="goToChat" />
       </div>
-      <div class="menu-item">
+      <div class="menu-item" :class="{ active: activeMenu === 'friend' }" @click="goToFriend">
         <img src="@/static/icons/friend.png" alt="好友" @click="goToFriend" />
       </div>
       <div class="menu-item">
@@ -25,7 +25,7 @@
       <div class="menu-item">
         <i class="icon-moments">📱</i>
       </div>
-      <div class="menu-item">
+      <div class="menu-item" :class="{ active: activeMenu === 'profile' }" @click="goToProfile">
         <img src="@/static/icons/my.png" alt="我的" @click="goToProfile" />
       </div>
       <div class="menu-item settings" @click.stop="openSettingsMenu">
@@ -39,7 +39,7 @@
 
     <!-- 中间动态内容区域 -->
     <div class="content-area">
-      <router-view></router-view>
+      <router-view @menu-change="handleMenuChange"></router-view>
     </div>
   </div>
 </template>
@@ -60,34 +60,42 @@ export default {
       this.initWebSocket();
     })
   },
+  beforeDestroy() {
+    this.closeWebSocket();
+  },
   data() {
     return {
       userInfo: {}, // 存储用户信息
       defaultAvatar: defaultAvatar, // 默认头像路径
       showSettingsMenu: false,
       webSocket: null,
+      // 默认首页
+      activeMenu: 'home',
     }
   },
   methods: {
-    // 切换到不同的视图
-    setCurrentView(view) {
-      console.log('切换到：', view)
-      this.currentView = view
-    },
-
     // 跳转到个人资料
     goToProfile() {
+      this.activeMenu = 'profile'
       this.$router.push('/profile')
     },
 
     // 跳转到首页
     goToHome() {
+      this.activeMenu = 'home'
       this.$router.push('/home')
     },
 
     // 跳转到聊天
     goToChat() {
+      this.activeMenu = 'chat'
       this.$router.push('/chat')
+    },
+
+    // 跳转到好友
+    goToFriend() {
+      this.activeMenu = 'friend'
+      this.$router.push('/friend')
     },
 
     // 打开/关闭设置菜单
@@ -111,42 +119,26 @@ export default {
       this.userInfo = res.data || {}
     },
 
-    // 跳转到好友
-    goToFriend() {
-      this.$router.push('/friend')
-    },
-
     initWebSocket() {
       // 防止重复连接
       if (this.webSocket) return;
 
       this.webSocket = connectWebSocket({
         onOpen: () => {
-          console.log('WebSocket连接成功');
-          // 可以发送初始化消息，如用户身份验证
-          // this.webSocket.send(JSON.stringify({}));
         },
         onMessage: (event) => {
-          const data = JSON.parse(event.data);
-          // this.handleWebSocketMessage(data);
         },
         onClose: () => {
-          console.log('WebSocket连接关闭');
           this.webSocket = null;
-          // 可以尝试重连
-          setTimeout(() => this.initWebSocket(), 5000);
         },
         onError: (error) => {
-          console.error('WebSocket错误:', error);
         }
       });
     },
 
+    // 关闭WebSocket连接
     closeWebSocket() {
-      console.log('WebSocket连接关闭')
-      if (this.webSocket) {
-        closeWebSocket()
-      }
+      closeWebSocket()
     },
 
     handleWebSocketMessage(data) {
@@ -169,11 +161,13 @@ export default {
     handleNewMessage(message) {
       // 处理新消息
       console.log('收到新消息:', message);
+    },
+
+    // 接收子组件的菜单变更事件
+    handleMenuChange(menuName) {
+      this.activeMenu = menuName
     }
   },
-  beforeDestroy() {
-    this.closeWebSocket();
-  }
 }
 </script>
 
@@ -225,33 +219,46 @@ export default {
   color: #7D7D7D;
   margin-bottom: 15px;
   cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
 }
 
 .menu-item.active {
-  color: #07C160;
-  border-left: 3px solid #07C160;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background-color: #07C160;
+  border-radius: 0 3px 3px 0;
+}
+
+.menu-item.active img {
+  filter: brightness(1.2);
+}
+
+/* 悬停效果 */
+.menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.menu-item:hover img {
+  transform: scale(1.1);
+}
+
+.menu-item img {
+  transition: all 0.3s ease;
 }
 
 .menu-item.settings {
   margin-top: auto;
   margin-bottom: 20px;
-}
-
-/* 左侧联系人列表样式 */
-.contact-list {
-  width: 30%;
-  background: #eee;
-  border-right: 1px solid #ddd;
-  display: flex;
-  flex-direction: column;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
 }
 
 .search-bar input {
@@ -263,220 +270,9 @@ export default {
   outline: none;
 }
 
-.search-bar .back-btn {
-  margin-left: 10px;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.contact {
-  display: flex;
-  padding: 12px;
-  border-bottom: 1px solid #e0e0e0;
-  cursor: pointer;
-}
-
-.contact.active {
-  background: #d9d9d9;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  background: #07C160;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  font-size: 18px;
-}
-
-.info {
-  flex: 1;
-  overflow: hidden;
-}
-
-.name {
-  font-size: 16px;
-  margin-bottom: 4px;
-  text-align: left;
-}
-
-.last-msg {
-  font-size: 12px;
-  color: #888;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
-}
-
-.time {
-  font-size: 12px;
-  color: #888;
-  margin-left: 10px;
-}
-
-/* 右侧聊天窗口样式 */
-.chat-window {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.chat-header {
-  height: 50px;
-  border-bottom: 1px solid #ddd;
-  display: flex;
-  align-items: center;
-  padding: 0 15px;
-}
-
-.chat-title {
-  font-size: 18px;
-  flex: 1;
-  text-align: left;
-}
-
-.chat-actions {
-  cursor: pointer;
-}
-
-.messages {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
-  background: #f5f5f5;
-  background-image: url('@/static/images/background.png');
-  background-size: cover;
-  background-position: center;
-}
-
-.message {
-  margin-bottom: 15px;
-  max-width: 70%;
-  display: flex;
-}
-
-.message.received {
-  align-self: flex-start;
-}
-
-.message.sent {
-  margin-left: auto;
-  justify-content: flex-end;
-}
-
-.message .content {
-  padding: 10px 15px;
-  border-radius: 4px;
-  display: inline-block;
-  position: relative;
-}
-
-.message.received .content {
-  background: white;
-  border: 1px solid #e5e5e5;
-}
-
-.message.sent .content {
-  background: #95EC69;
-}
-
-.input-tools {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  padding-bottom: 8px;
-}
-
-.left-tools {
-  display: flex;
-}
-
-.icon-tool {
-  margin-right: 15px;
-  font-size: 20px;
-  cursor: pointer;
-  color: #7d7d7d;
-}
-
-.right-tools {
-  margin-right: 0;
-}
-
-.input-row {
-  display: flex;
-  width: 100%;
-}
-
-.input-row input {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  outline: none;
-}
-
-.input-row button {
-  margin-left: 8px;
-  padding: 0 12px;
-  background: #07C160;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.input-container {
-  padding: 10px;
-  background: #f5f5f5;
-  border-top: 1px solid #e6e6e6;
-}
-
-.toolbar {
-  margin-bottom: 8px;
-  overflow: hidden; /* 清除浮动 */
-}
-
-.tool-icon {
-  margin-right: 15px;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.input-row {
-  display: flex;
-}
-
-.input-row input {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  outline: none;
-}
-
-.send-btn {
-  margin-left: 8px;
-  padding: 0 15px;
-  background: #07C160;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
 .content-area {
   flex: 1;
   display: flex;
-}
-
-.main-content {
-  display: flex;
-  flex: 1;
 }
 
 .settings {
