@@ -18,6 +18,7 @@
       </div>
       <div class="menu-item" :class="{ active: activeMenu === 'friend' }" @click="goToFriend">
         <img src="@/static/icons/friend.png" alt="好友" @click="goToFriend" />
+        <span v-if="unreadCount.friend > 0" class="menu-badge">{{ unreadCount.friend }}</span>
       </div>
       <div class="menu-item">
         <i class="icon-discover">🌍</i>
@@ -39,7 +40,7 @@
 
     <!-- 中间动态内容区域 -->
     <div class="content-area">
-      <router-view @menu-change="handleMenuChange"></router-view>
+      <router-view @menu-change="handleMenuChange" @clear-unread="clearUnread"></router-view>
     </div>
   </div>
 </template>
@@ -50,7 +51,7 @@ import { getUserInfo } from '@/api/user'
 import defaultAvatar from '@/static/images/user_default.png'
 import router from "@/router";
 import {closeWebSocket, connectWebSocket} from '@/utils/websocket';
-import { setObject, remove } from '@/utils/localStorage';
+import { setObject, remove, get, set } from '@/utils/localStorage';
 
 export default {
   name: 'WeChatApp',
@@ -63,6 +64,15 @@ export default {
   beforeDestroy() {
     this.closeWebSocket();
   },
+  watch: {
+    $route(route) {
+      const activeMenu = get('activeMenu');
+      if (activeMenu) {
+        this.activeMenu = activeMenu;
+        set('activeMenu', this.activeMenu);
+      }
+    }
+  },
   data() {
     return {
       userInfo: {}, // 存储用户信息
@@ -71,31 +81,51 @@ export default {
       webSocket: null,
       // 默认首页
       activeMenu: 'home',
+      // 未读消息计数
+      unreadCount: {
+        home: 0,
+        chat: 0,
+        friend: 1,
+        discover: 0,
+        moments: 0,
+        profile: 0
+      }
+    }
+  },
+  created() {
+    const activeMenu = get('activeMenu');
+    if (activeMenu) {
+      this.activeMenu = activeMenu;
+    } else {
+      // 默认值
+      this.activeMenu = 'home';
     }
   },
   methods: {
     // 跳转到个人资料
     goToProfile() {
-      this.activeMenu = 'profile'
-      this.$router.push('/profile')
+      this.goToPage('profile')
     },
 
     // 跳转到首页
     goToHome() {
-      this.activeMenu = 'home'
-      this.$router.push('/home')
+      this.goToPage('home')
     },
 
     // 跳转到聊天
     goToChat() {
-      this.activeMenu = 'chat'
-      this.$router.push('/chat')
+      this.goToPage('chat')
     },
 
     // 跳转到好友
     goToFriend() {
-      this.activeMenu = 'friend'
-      this.$router.push('/friend')
+      this.goToPage('friend')
+    },
+
+    goToPage(menu) {
+      this.activeMenu = menu;
+      set('activeMenu', this.activeMenu);
+      this.$router.push('/' + menu);
     },
 
     // 打开/关闭设置菜单
@@ -108,6 +138,7 @@ export default {
       removeToken();
       this.closeWebSocket();
       remove('userInfo');
+      remove('activeMenu');
       router.push('/login');
     },
 
@@ -127,6 +158,8 @@ export default {
         onOpen: () => {
         },
         onMessage: (event) => {
+          const data = JSON.parse(event.data)
+          this.handleWebSocketMessage(data)
         },
         onClose: () => {
           this.webSocket = null;
@@ -166,6 +199,13 @@ export default {
     // 接收子组件的菜单变更事件
     handleMenuChange(menuName) {
       this.activeMenu = menuName
+    },
+
+    // 清除某个菜单的未读计数
+    clearUnread(menuName) {
+      if (this.unreadCount[menuName] > 0) {
+        this.unreadCount[menuName] = 0
+      }
     }
   },
 }
@@ -221,6 +261,7 @@ export default {
   cursor: pointer;
   position: relative;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .menu-item.active {
@@ -322,5 +363,30 @@ export default {
 .menu-item.settings {
   margin-top: auto;
   margin-bottom: 15px;  /* 底部间距减小 */
+}
+
+/* 新增小红点样式 */
+.menu-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background-color: #f44336;
+  color: white;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  font-weight: bold;
+  animation: pulse 1.5s infinite;
+}
+
+/* 小红点呼吸动画 */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 </style>

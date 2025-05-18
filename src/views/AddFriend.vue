@@ -35,9 +35,9 @@
             <img v-if="user.sex === 1" src="@/static/icons/man.png" alt="男" class="sex-icon">
             <img v-if="user.sex === 2" src="@/static/icons/woman.png" alt="女" class="sex-icon">
           </span>
-              <span class="user-status" :class="{'online': user.connectStatus === 1, 'offline': user.connectStatus === 2}">
+              <span class="user-status" :class="{'online': user.isOnline, 'offline': !user.isOnline}">
                 <i class="status-icon"></i>
-                {{ user.connectStatus === 1 ? '在线' : '离线' }}
+                {{ user.isOnline ? '在线' : '离线' }}
               </span>
             </div>
             <div class="user-id">微信号: xg_{{ user.id }}</div>
@@ -102,7 +102,7 @@ export default {
           id: user.id,
           name: user.username,
           avatar: user.avatar,
-          connectStatus: user.connectStatus,
+          isOnline: user.isOnline,
           sex: user.sex,
           requestSent: false
         }));

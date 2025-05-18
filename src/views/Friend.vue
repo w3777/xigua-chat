@@ -169,7 +169,7 @@
 
           <div class="detail-actions">
             <div class="action-btn-container">
-              <button class="action-btn chat-btn" @click="startChat()">
+              <button class="action-btn chat-btn" @click="startChat(friendDetail.userId)">
                 <i class="icon-message"></i> 发消息
               </button>
             </div>
@@ -205,6 +205,7 @@
 
 <script>
 import { sendFriendRequest, friendRequest, getFriendList, friendVerify, getFriendDetail } from '@/api/friendRelation.js'
+import {set} from "@/utils/localStorage.js";
 
 export default {
   data() {
@@ -232,6 +233,7 @@ export default {
   },
   methods: {
     startChat(friendId) {
+      set('activeMenu', 'chat');
       this.$router.push({
         path: 'Chat',
         query: {

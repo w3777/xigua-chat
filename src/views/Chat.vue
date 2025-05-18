@@ -48,18 +48,16 @@
       <div class="messages" ref="messagesContainer">
         <!-- 历史消息 -->
         <div
-            v-for="message in friendHistoryMessage"
+            v-for="message in chatMessages"
             :key="message.id"
-            :class="['message', message.status, { 'sending': message.status === 'sending' }]"
+            class="message"
+            :class="{
+              'sender': message.senderId === currentUser.id,
+              'receiver': message.senderId !== currentUser.id
+            }"
         >
           <div class="content">
-            {{ message.content }}
-            <div class="message-status">
-              <span class="time">{{ formatTime(message.timestamp) }}</span>
-              <span v-if="message.status === 'sending'" class="sending-icon">🕒</span>
-              <span v-else-if="message.status === 'sent'" class="read-icon">✓</span>
-              <span v-else-if="message.status === 'read'" class="read-icon">✓✓</span>
-            </div>
+            {{ message.message }}
           </div>
         </div>
       </div>
@@ -101,6 +99,7 @@ import AddFriend from "./AddFriend.vue";
 import {getLastChat} from "@/api/chatMessage.js";
 import {getSocketInstance} from '@/utils/websocket';
 import {getObject} from '@/utils/localStorage.js'
+import {ElMessage} from "element-plus";
 
 export default {
   name: 'WeChatApp',
@@ -131,11 +130,14 @@ export default {
       showChatWindow: false,
       friendHistoryMessage: [], // 存储聊天消息
       newMessage: '', // 输入框内容
-      socket: null, // WebSocket实例
+      socket: null, // WebSocket实例,
+      chatMessages: [],
+      currentUser: {}
     }
   },
   created() {
     this.initWebSocket();
+    this.currentUser = getObject('userInfo');
 
     // 通过其他页面直接跟好友聊天，聊天窗口设置为该好友
     this.topUserId = this.$route.query.friendId;
@@ -203,46 +205,41 @@ export default {
     // 初始化WebSocket连接
     initWebSocket() {
       this.socket = getSocketInstance()
+      if(this.socket == null){
+        ElMessage.warning({ message: '消息服务暂时不可用，请稍后再试', plain: true });
+        return;
+      }
 
       this.socket.onopen = () => {
-        console.log('WebSocket连接已建立');
         // this.loadHistoryMessages(); // 连接成功后加载历史消息
       };
 
-
       this.socket.onmessage = (event) => {
-        console.log('收到消息:', event);
-        const data = event.data;
-        console.log('收到消息:', data);
-        // this.handleSocketMessage(data);
+        const data = JSON.parse(event.data);
+        this.handleSocketMessage(data);
       };
 
       this.socket.onclose = () => {
-        console.log('WebSocket连接已关闭');
         // 5秒后尝试重连
         setTimeout(() => this.initWebSocket(), 5000);
       };
 
       this.socket.onerror = (error) => {
-        console.error('WebSocket错误:', error);
       };
     },
 
     // 处理收到的消息
     handleSocketMessage(data) {
-      switch(data.type) {
-        case 'message':
-          this.messages.push({
-            id: data.messageId,
-            sender: data.senderId,
-            content: data.content,
-            timestamp: new Date(data.timestamp),
-            status: 'received',
-            isRead: false
-          });
-          this.scrollToBottom();
-          break;
+      if(data.messageType != 'chat'){
+        return;
       }
+      this.chatMessages.push({
+        id: data.messageId,
+        sender: data.senderId,
+        receiverId: data.receiverId,
+        messageType: data.messageType,
+        message: data.message
+      });
     },
 
     // 加载历史消息
@@ -256,7 +253,7 @@ export default {
         });
         this.friendHistoryMessage = res.data.map(msg => ({
           ...msg,
-          status: msg.sender === this.currentUser.id ? 'sent' : 'received'
+          status: msg.sender === this.currentUser.id ? 'sender' : 'receiver'
         }));
         this.scrollToBottom();
       } catch (error) {
@@ -267,12 +264,11 @@ export default {
     // 发送消息
     sendMessage() {
       if (!this.newMessage.trim()) return;
-      console.log('发送消息:', this.newMessage);
-      const userInfo = getObject('userInfo');
-      if(userInfo == null){
+
+      if(this.currentUser == null){
         return;
       }
-      const senderId = userInfo.id;
+      const senderId = this.currentUser.id;
       if(senderId == null) {
         return;
       }
@@ -280,15 +276,18 @@ export default {
       const message = {
         senderId: senderId,
         receiverId: this.currentFriend.userId,
-        message: this.newMessage.trim()
+        message: this.newMessage.trim(),
+        messageType: 'chat',
       };
-      console.log('消息体', JSON.stringify(message))
 
+      // 立即显示到聊天窗口
+      this.chatMessages.push(message);
+      this.newMessage = '';
+      this.scrollToBottom();
       // 发送消息
       this.socket.send(JSON.stringify(message));
 
-      this.newMessage = '';
-      // this.scrollToBottom();
+
     },
 
     // 更新消息状态
@@ -304,66 +303,22 @@ export default {
       if (!date) return '';
       const d = new Date(date);
       return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
+    },
+
+    // 滚动到底部
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const container = this.$refs.messagesContainer;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
     }
   }
 }
 </script>
 
 <style scoped>
-.wechat-app {
-  display: flex;
-  width: 1000px;
-  height: 650px;
-  margin: 0 auto;
-  border: 1px solid #ddd;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* 左侧菜单栏样式 */
-.menu-bar {
-  width: 70px;
-  background: #2E2E2E;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 20px;
-}
-
-.user-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 4px;
-  margin-bottom: 30px;
-  overflow: hidden;
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.menu-item {
-  width: 100%;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #7D7D7D;
-  margin-bottom: 15px;
-  cursor: pointer;
-}
-
-.menu-item.active {
-  color: #07C160;
-  border-left: 3px solid #07C160;
-}
-
-.menu-item.settings {
-  margin-top: auto;
-  margin-bottom: 20px;
-}
-
 /* 左侧联系人列表样式 */
 .friend-list {
   width: 30%;
@@ -489,21 +444,27 @@ export default {
   background-size: cover;
   background-position: center;
   scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
 }
 
 .message {
   margin-bottom: 15px;
   max-width: 70%;
   display: flex;
+  align-self: flex-start;
+  animation: fadeIn 0.3s ease-out;
 }
 
-.message.received {
+.message.receiver {
   align-self: flex-start;
 }
 
-.message.sent {
+.message.sender {
   margin-left: auto;
   justify-content: flex-end;
+  align-self: flex-end;
+  flex-direction: row-reverse;
 }
 
 .message .content {
@@ -511,14 +472,16 @@ export default {
   border-radius: 4px;
   display: inline-block;
   position: relative;
+  margin: 0 10px;
+  max-width: 70%;
 }
 
-.message.received .content {
+.message.receiver .content {
   background: white;
   border: 1px solid #e5e5e5;
 }
 
-.message.sent .content {
+.message.sender .content {
   background: #95EC69;
 }
 
@@ -573,21 +536,6 @@ export default {
   border-top: 1px solid #e6e6e6;
 }
 
-.toolbar {
-  margin-bottom: 8px;
-  overflow: hidden; /* 清除浮动 */
-}
-
-.tool-icon {
-  margin-right: 15px;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.input-row {
-  display: flex;
-}
-
 .input-row input {
   flex: 1;
   padding: 8px 12px;
@@ -606,31 +554,9 @@ export default {
   cursor: pointer;
 }
 
-.content-area {
-  flex: 1;
-  display: flex;
-}
-
 .main-content {
   display: flex;
   flex: 1;
-}
-
-.settings {
-  position: relative;
-}
-
-.settings-menu {
-  position: absolute;
-  bottom: 50px;  /* 上移10px */
-  left: 10px;
-  width: 120px;  /* 宽度缩小 */
-  background: #fff;
-  border-radius: 6px;  /* 圆角缩小 */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);  /* 阴影变淡 */
-  padding: 6px 0;  /* 内边距缩小 */
-  z-index: 100;
-  animation: menu-fade 0.2s ease-out;
 }
 
 @keyframes menu-fade {
@@ -642,27 +568,6 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.setting-item {
-  padding: 8px 12px;  /* 内边距缩小 */
-  font-size: 13px;  /* 字体缩小 */
-  color: #333;
-  cursor: pointer;
-  transition: all 0.15s;  /* 动画加快 */
-  text-align: center;
-  margin: 0;
-  line-height: 1.4;  /* 行高优化 */
-}
-
-.setting-item:hover {
-  background-color: #f5f5f5;  /* 悬停色变浅 */
-}
-
-/* 保持齿轮图标基础样式 */
-.menu-item.settings {
-  margin-top: auto;
-  margin-bottom: 15px;  /* 底部间距减小 */
 }
 
 .avatar {
@@ -704,68 +609,15 @@ export default {
   color: #f56c6c;
 }
 
-.message-status {
-  font-size: 11px;
-  color: #999;
-  text-align: right;
-  margin-top: 4px;
-}
-
-.sending-icon {
-  color: #ccc;
-}
-
-.read-icon {
-  color: #4CAF50;
-}
-
 /* 发送中消息样式 */
 .message.sending .content {
   opacity: 0.7;
   background-color: #e5f7d0;
 }
 
-/* 对方正在输入提示 */
-.typing-indicator {
-  display: flex;
-  justify-content: flex-start;
-  padding: 8px 12px;
-}
-
-.typing-dots {
-  display: inline-flex;
-  align-items: center;
-}
-
-.typing-dots span {
-  animation: typing-bounce 1.4s infinite ease-in-out;
-  margin: 0 1px;
-}
-
-.typing-dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
 @keyframes typing-bounce {
   0%, 60%, 100% { transform: translateY(0); }
   30% { transform: translateY(-3px); }
-}
-
-/* 系统消息样式 */
-.system-message {
-  text-align: center;
-  color: #888;
-  font-size: 14px;
-  padding: 10px;
-}
-
-/* 消息容器滚动条 */
-.messages {
-  //scroll-behavior: smooth;
 }
 
 .friend-status {
@@ -790,5 +642,16 @@ export default {
 .status-label {
   font-size: 12px;
   color: #999;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
