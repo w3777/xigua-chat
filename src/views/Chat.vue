@@ -38,7 +38,7 @@
     <div class="chat-window" v-show="showChatWindow">
       <!-- 聊天标题栏 -->
       <div class="chat-header">
-        <div class="chat-title">{{ currentFriend.username || '' }}</div>
+        <div class="chat-title">{{ currentFriend && currentFriend.username ? currentFriend.username : '' }}</div>
         <div class="chat-actions">
           <i class="close-chat" @click="closeChatWindow">×</i>
         </div>
@@ -96,7 +96,7 @@
 import {removeToken} from "@/utils/auth.js";
 import router from "@/router";
 import AddFriend from "./AddFriend.vue";
-import {getLastChat} from "@/api/chatMessage.js";
+import {getFriendLastMes} from "@/api/chatMessage.js";
 import {getSocketInstance} from '@/utils/websocket';
 import {getObject} from '@/utils/localStorage.js'
 import {ElMessage} from "element-plus";
@@ -141,11 +141,9 @@ export default {
 
     // 通过其他页面直接跟好友聊天，聊天窗口设置为该好友
     this.topUserId = this.$route.query.friendId;
-    if (this.topUserId !== null && this.topUserId !== undefined && this.topUserId !== '') {
-      this.getLastChat(this.topUserId).then(() => {
-        this.selectFriend(this.topUserId)
-      })
-    }
+    this.getFriendLastMes(this.topUserId).then(() => {
+      this.selectFriend(this.topUserId)
+    })
 
   },
   beforeDestroy() {
@@ -172,9 +170,15 @@ export default {
     },
 
     // 关闭添加好友对话框
-    getLastChat(topUserId) {
-      return getLastChat(topUserId).then(res => {
-        this.friends = res.data.map(friend => ({
+    getFriendLastMes(topUserId) {
+      const data = {
+        topUserId: topUserId,
+        pageNum: 1,
+        pageSize: 10
+      }
+      return getFriendLastMes(data).then(res => {
+        console.log(res)
+        this.friends = res.data.rows.map(friend => ({
           userId: friend.userId,
           username: friend.username,
           avatar: friend.avatar,
@@ -217,6 +221,10 @@ export default {
       this.socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         this.handleSocketMessage(data);
+
+        this.getFriendLastMes(this.topUserId).then(() => {
+          this.selectFriend(this.topUserId)
+        })
       };
 
       this.socket.onclose = () => {
@@ -278,6 +286,7 @@ export default {
         receiverId: this.currentFriend.userId,
         message: this.newMessage.trim(),
         messageType: 'chat',
+        createTime : Date.now()
       };
 
       // 立即显示到聊天窗口

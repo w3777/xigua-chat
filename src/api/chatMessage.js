@@ -1,9 +1,10 @@
 import request from '@/utils/request'
 
 // 获取最后几条聊天记录
-export function getLastChat(topUserId) {
+export function getFriendLastMes(data) {
     return request({
-        url: '/client/chat/message/getLastChat?topUserId=' + topUserId,
-        method: 'get'
+        url: '/center/chat/message/getFriendLastMes',
+        method: 'post',
+        data: data
     })
 }
