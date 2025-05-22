@@ -2,8 +2,8 @@
   <!-- 联系人列表 + 聊天窗口 -->
   <div class="main-content">
     <!-- 左侧联系人列表 -->
-    <div class="friend-list">
-      <div class="search-bar">
+    <div class="friend-list" @scroll="friendScroll">
+      <div class="search-bar sticky">
         <input type="text" placeholder="搜索">
         <span class="back-btn" @click="openAddFriend">+</span>
       </div>
@@ -32,6 +32,13 @@
           {{ friend.unread }}
         </div>
       </div>
+
+<!--      <div v-if="loading" class="loading-more">-->
+<!--        加载中...-->
+<!--      </div>-->
+<!--      <div v-if="noMoreData" class="no-more-data">-->
+<!--        没有更多数据了-->
+<!--      </div>-->
     </div>
 
     <!-- 右侧聊天窗口 -->
@@ -87,7 +94,7 @@
       </div>
     </div>
 
-    <!-- 个人资料组件 -->
+    <!-- 添加好友组件 -->
     <AddFriend v-if="showAddFriend" @close="closeAddFriend" />
   </div>
 </template>
@@ -153,17 +160,6 @@ export default {
     }
   },
   methods: {
-    // 跳转到个人资料
-    goToProfile() {
-      this.$router.push('/profile')
-    },
-
-    // 退出登录
-    logout() {
-      removeToken();
-      router.push('/login');
-    },
-
     // 打开添加好友界面
     openAddFriend() {
       this.showAddFriend = true;
@@ -320,7 +316,12 @@ export default {
           container.scrollTop = container.scrollHeight;
         }
       });
-    }
+    },
+
+    // 滚动事件处理
+    friendScroll(event) {
+      // todo 按滚动做分页查询
+    },
   }
 }
 </script>
@@ -333,6 +334,12 @@ export default {
   border-right: 1px solid #ddd;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+}
+
+.friend-list::-webkit-scrollbar {
+  display: none;
+  width: 0;
 }
 
 .search-bar {
@@ -341,6 +348,13 @@ export default {
   padding: 10px;
   background: #f5f5f5;
   border-bottom: 1px solid #e0e0e0;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 10px;
 }
 
 .search-bar input {
