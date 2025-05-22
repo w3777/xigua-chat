@@ -13,7 +13,9 @@ let socketInstance = null;
 // 重试次数
 let reconnectAttempts = 0;
 // 最大重试次数
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 2;
+// 重试间隔时间（毫秒）
+const RETRY_DELAY = [2000, 2000, 5000];
 // 重试定时器
 let retryTimer = null;
 // 手动关闭连接标记
@@ -24,6 +26,12 @@ export function connectWebSocket(callbacks = {}) {
     if (isManualClose) {
         // 如果是手动断开，直接不再连接
         return null;
+    }
+
+    if (socketInstance == null || socketInstance.readyState === WebSocket.CONNECTING) {
+        setTimeout(() => {
+            checkConnectionTimeOut();
+        }, 300);
     }
 
     if (socketInstance && socketInstance.readyState === WebSocket.OPEN) {
@@ -41,22 +49,23 @@ export function connectWebSocket(callbacks = {}) {
     }
 
     const wsUrl = `${import.meta.env.VITE_WS_BASE_URL}/client/connect/${userInfo.id}`;
-    const ws = new WebSocket(wsUrl);
+    socketInstance = new WebSocket(wsUrl);
+
     isManualClose = false; // 标记为系统连接
 
-    ws.onopen = () => {
+    socketInstance.onopen = () => {
         reconnectAttempts = 0;
         console.log('WebSocket 已连接');
         ElMessage.success({ message: '已连接消息服务，可接收新消息', plain: true });
         callbacks.onOpen?.();
     };
 
-    ws.onmessage = (event) => {
+    socketInstance.onmessage = (event) => {
         callbacks.onMessage?.(event);
     };
 
-    ws.onclose = () => {
-        console.log('WebSocket 连接关闭');
+    socketInstance.onclose = () => {
+        console.log('WebSocket 已断开');
         socketInstance = null;
         callbacks.onClose?.();
 
@@ -66,30 +75,19 @@ export function connectWebSocket(callbacks = {}) {
             return;
         }
 
-        if (reconnectAttempts < MAX_RETRIES) {
-            const delay = [1000, 2000, 5000][reconnectAttempts];
-            reconnectAttempts++;
-            console.log(`正在尝试重新连接...第${reconnectAttempts + 1}次，等待${delay}ms`);
-            ElMessage.warning({
-                message: `消息服务暂时不可用，正在尝试重新连接...第${reconnectAttempts + 1}次，等待${delay}ms`,
-                plain: true
-            })
-
-            retryTimer = setTimeout(() => {
-                connectWebSocket(callbacks);
-            }, delay);
-        } else {
-            ElMessage.warning({ message: '消息服务暂时不可用，请稍后再试', plain: true });
+        if(socketInstance == null || socketInstance.readyState === WebSocket.CLOSED){
+            closeWebSocket();
+            ElMessage.error({ message: '连接消息服务失败，请检查网络或稍后再试', plain: true });
         }
     };
 
-    ws.onerror = (error) => {
+    socketInstance.onerror = (error) => {
         console.error('WebSocket 出现错误:', error);
+        socketInstance.close();
         ElMessage.error({ message: '连接消息服务时出现问题', plain: true });
     };
 
-    socketInstance = ws;
-    return ws;
+    return socketInstance;
 }
 
 /**
@@ -105,7 +103,7 @@ export function getSocketInstance() {
         return socketInstance;
     }
 
-    return connectWebSocket();
+    return socketInstance;
 }
 
 /**
@@ -119,4 +117,28 @@ export function closeWebSocket() {
     }
     clearTimeout(retryTimer);
     reconnectAttempts = 0;
+}
+
+function checkConnectionTimeOut() {
+    if (isManualClose) {
+        return;
+    }
+    if (socketInstance && socketInstance.readyState === WebSocket.OPEN) {
+        return;
+    }
+    if (reconnectAttempts <= MAX_RETRIES) {
+        const delay = RETRY_DELAY[reconnectAttempts];
+        reconnectAttempts++;
+        console.log(`正在尝试重新连接...第${reconnectAttempts}次，等待${delay / 1000}秒`);
+        ElMessage.warning({
+            message: `消息服务暂时不可用，正在尝试重新连接...第${reconnectAttempts}次，等待${delay / 1000}秒`,
+            plain: true
+        })
+
+        retryTimer = setTimeout(() => {
+            connectWebSocket();
+        }, delay);
+    } else {
+        closeWebSocket();
+    }
 }

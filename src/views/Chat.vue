@@ -177,7 +177,6 @@ export default {
         pageSize: 10
       }
       return getFriendLastMes(data).then(res => {
-        console.log(res)
         this.friends = res.data.rows.map(friend => ({
           userId: friend.userId,
           username: friend.username,
@@ -210,7 +209,6 @@ export default {
     initWebSocket() {
       this.socket = getSocketInstance()
       if(this.socket == null){
-        ElMessage.warning({ message: '消息服务暂时不可用，请稍后再试', plain: true });
         return;
       }
 
