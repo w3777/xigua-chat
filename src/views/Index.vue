@@ -50,16 +50,16 @@ import {removeToken} from "@/utils/auth.js";
 import { getUserInfo } from '@/api/user'
 import defaultAvatar from '@/static/images/user_default.png'
 import router from "@/router";
-import {closeWebSocket, connectWebSocket} from '@/utils/websocket';
-import { setObject, remove, get, set } from '@/utils/localStorage';
+import {closeWebSocket, connectWebSocket, getSocketInstance} from '@/utils/websocket';
+import {remove, get, set, getObject, clear} from '@/utils/localStorage';
 
 export default {
   name: 'WeChatApp',
   mounted() {
-    this.fetchUserInfo().then(() => {
-      // 初始化WebSocket连接
-      this.initWebSocket();
-    })
+    // 从localStorage中获取用户信息
+    const userInfo = getObject('userInfo')
+    this.userInfo = userInfo || {}
+    this.initWebSocket();
   },
   beforeDestroy() {
     this.closeWebSocket();
@@ -137,36 +137,14 @@ export default {
     logout() {
       removeToken();
       this.closeWebSocket();
-      remove('userInfo');
-      remove('activeMenu');
+      clear();
       router.push('/login');
-    },
-
-    // 获取用户信息
-    async fetchUserInfo() {
-      const res = await getUserInfo()
-      // 当前用户信息存储在localStorage中
-      setObject('userInfo', res.data)
-      this.userInfo = res.data || {}
     },
 
     initWebSocket() {
       // 防止重复连接
       if (this.webSocket) return;
-
-      this.webSocket = connectWebSocket({
-        onOpen: () => {
-        },
-        onMessage: (event) => {
-          const data = JSON.parse(event.data)
-          this.handleWebSocketMessage(data)
-        },
-        onClose: () => {
-          this.webSocket = null;
-        },
-        onError: (error) => {
-        }
-      });
+      this.webSocket = connectWebSocket();
     },
 
     // 关闭WebSocket连接

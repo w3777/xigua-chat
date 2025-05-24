@@ -13,7 +13,7 @@
           :key="friend.userId"
           class="friend"
           :class="{ active: currentFriend && currentFriend.userId === friend.userId }"
-          @click="selectFriend(friend.userId)"
+          @click="lockFriendWindow(friend.userId)"
       >
         <div class="avatar">
           <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.username">
@@ -104,8 +104,8 @@ import {removeToken} from "@/utils/auth.js";
 import router from "@/router";
 import AddFriend from "./AddFriend.vue";
 import {getFriendLastMes} from "@/api/chatMessage.js";
-import {getSocketInstance} from '@/utils/websocket';
-import {getObject} from '@/utils/localStorage.js'
+import {closeWebSocket, connectWebSocket, getSocketInstance} from '@/utils/websocket';
+import {getObject, setObject} from '@/utils/localStorage.js'
 import {ElMessage} from "element-plus";
 
 export default {
@@ -142,15 +142,18 @@ export default {
       currentUser: {}
     }
   },
-  created() {
-    this.initWebSocket();
+  async created() {
     this.currentUser = getObject('userInfo');
-
     // 通过其他页面直接跟好友聊天，聊天窗口设置为该好友
-    this.topUserId = this.$route.query.friendId;
-    this.getFriendLastMes(this.topUserId).then(() => {
-      this.selectFriend(this.topUserId)
+    this.currentFriend = getObject('currentFriend') || {};
+    const currentFriendId = this.$route.query.friendId || this.currentFriend.userId;
+    await this.getFriendLastMes().then(() => {
+      // 如果有好友ID，则锁定聊天窗口
+      if(currentFriendId != null){
+        this.lockFriendWindow(currentFriendId)
+      }
     })
+    this.initWebSocket();
 
   },
   beforeDestroy() {
@@ -185,10 +188,14 @@ export default {
       })
     },
 
-    // 选择好友
-    selectFriend(userId) {
-      this.currentFriend = this.friends.find(friend => friend.userId === userId);
+    // 锁定好友聊天窗口
+    lockFriendWindow(friendId) {
+      if(friendId == null){
+        return
+      }
+      this.currentFriend = this.friends.find(friend => friend.userId === friendId);
       this.showChatWindow = true;
+      setObject('currentFriend', this.currentFriend);
     },
 
     // 新增关闭聊天窗口方法
@@ -205,33 +212,22 @@ export default {
     initWebSocket() {
       this.socket = getSocketInstance()
       if(this.socket == null){
+        console.log('socket is null')
         return;
       }
 
-      this.socket.onopen = () => {
-        // this.loadHistoryMessages(); // 连接成功后加载历史消息
-      };
-
       this.socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        this.handleSocketMessage(data);
+        this.handleReceiveMessage(data);
 
         this.getFriendLastMes(this.topUserId).then(() => {
-          this.selectFriend(this.topUserId)
+          this.lockFriendWindow(this.topUserId)
         })
-      };
-
-      this.socket.onclose = () => {
-        // 5秒后尝试重连
-        setTimeout(() => this.initWebSocket(), 5000);
-      };
-
-      this.socket.onerror = (error) => {
       };
     },
 
     // 处理收到的消息
-    handleSocketMessage(data) {
+    handleReceiveMessage(data) {
       if(data.messageType != 'chat'){
         return;
       }

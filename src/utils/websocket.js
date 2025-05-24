@@ -18,17 +18,10 @@ const MAX_RETRIES = 2;
 const RETRY_DELAY = [2000, 2000, 5000];
 // 重试定时器
 let retryTimer = null;
-// 手动关闭连接标记
-let isManualClose = false;
 
 
 export function connectWebSocket(callbacks = {}) {
-    if (isManualClose) {
-        // 如果是手动断开，直接不再连接
-        return null;
-    }
-
-    if (socketInstance == null || socketInstance.readyState === WebSocket.CONNECTING) {
+    if (socketInstance && socketInstance.readyState === WebSocket.CONNECTING) {
         setTimeout(() => {
             checkConnectionTimeOut();
         }, 300);
@@ -41,17 +34,12 @@ export function connectWebSocket(callbacks = {}) {
     const userInfo = getObject('userInfo');
     if (!userInfo || !userInfo.id) {
         console.log('未登录，无法连接 WebSocket');
-        // ❗️防止重试机制中误提示
-        if (!isManualClose) {
-            ElMessage.error({ message: '请先登录以接收新消息', plain: true });
-        }
+        ElMessage.error({ message: '请先登录以接收新消息', plain: true });
         return null;
     }
 
     const wsUrl = `${import.meta.env.VITE_WS_BASE_URL}/client/connect/${userInfo.id}`;
     socketInstance = new WebSocket(wsUrl);
-
-    isManualClose = false; // 标记为系统连接
 
     socketInstance.onopen = () => {
         reconnectAttempts = 0;
@@ -69,16 +57,9 @@ export function connectWebSocket(callbacks = {}) {
         socketInstance = null;
         callbacks.onClose?.();
 
-        if (isManualClose) {
-            console.log('已主动断开，不再尝试连接');
-            ElMessage.info({ message: '已主动断开实时消息服务', plain: true });
-            return;
-        }
-
-        if(socketInstance == null || socketInstance.readyState === WebSocket.CLOSED){
-            closeWebSocket();
-            ElMessage.error({ message: '连接消息服务失败，请检查网络或稍后再试', plain: true });
-        }
+        console.log('已主动断开，不再尝试连接');
+        ElMessage.info({ message: '已主动断开实时消息服务', plain: true });
+        return;
     };
 
     socketInstance.onerror = (error) => {
@@ -103,6 +84,10 @@ export function getSocketInstance() {
         return socketInstance;
     }
 
+    if(socketInstance == null){
+        return checkConnectionTimeOut();
+    }
+
     return socketInstance;
 }
 
@@ -110,21 +95,16 @@ export function getSocketInstance() {
  * 主动关闭 WebSocket 连接
  */
 export function closeWebSocket() {
-    isManualClose = true;
     if (socketInstance) {
         socketInstance.close();
-        socketInstance = null;
     }
     clearTimeout(retryTimer);
     reconnectAttempts = 0;
 }
 
 function checkConnectionTimeOut() {
-    if (isManualClose) {
-        return;
-    }
     if (socketInstance && socketInstance.readyState === WebSocket.OPEN) {
-        return;
+        return socketInstance;
     }
     if (reconnectAttempts <= MAX_RETRIES) {
         const delay = RETRY_DELAY[reconnectAttempts];

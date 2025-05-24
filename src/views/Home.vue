@@ -11,7 +11,7 @@
           </div>
         </div>
         <div class="user-info">
-          <h2>{{ greetingText }}，用户</h2>
+          <h2>{{ greetingText }}，{{this.currentUser.username}}</h2>
           <p class="meta-info">
             {{ fullDateInfo }} |
             {{ location }} |
@@ -85,6 +85,7 @@
 
 <script>
 import { getLocation, getWeather } from "@/api/thirdParty.js";
+import {getObject} from "@/utils/localStorage.js";
 export default {
   name: 'Home',
   data() {
@@ -97,7 +98,11 @@ export default {
         emoji: '',
         temp: ''
       },
+      currentUser: {}
     }
+  },
+  created() {
+    this.currentUser = getObject('userInfo');
   },
   computed: {
     greetingText() {

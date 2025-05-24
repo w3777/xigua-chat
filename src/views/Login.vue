@@ -27,8 +27,9 @@
 </template>
 
 <script>
-import {login} from "@/api/user.js";
+import {getUserInfo, login} from "@/api/user.js";
 import {setToken} from "@/utils/auth.js";
+import {setObject} from "@/utils/localStorage.js";
 
 export default {
   data() {
@@ -60,13 +61,23 @@ export default {
           password: this.form.password
         };
 
-        const response = await login(requestData);
-        if (response.code === 200) {
-          this.$router.push('/home');
-          setToken(response.data)
-        } else {
-          this.$message.error('登录失败：' + response.data.msg);
+        // 调用登录接口
+        const loginRes = await login(requestData);
+        if (loginRes.code != 200) {
+          this.$message.error('登录失败：' + loginRes.data.msg);
         }
+        // 缓存token
+        setToken(loginRes.data)
+
+        // 调用当前用户接口 缓存当前用户信息
+        const userInfoRes = await getUserInfo()
+        if (userInfoRes.code != 200) {
+          this.$message.error('获取用户信息失败：' + userInfoRes.data.msg);
+        }
+        setObject('userInfo', userInfoRes.data)
+
+        // 跳转到首页
+        this.$router.push('/home');
       });
     }
   }
