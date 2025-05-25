@@ -2,43 +2,44 @@
   <!-- 联系人列表 + 聊天窗口 -->
   <div class="main-content">
     <!-- 左侧联系人列表 -->
-    <div class="friend-list" @scroll="friendScroll">
+    <div class="left-container">
       <div class="search-bar sticky">
         <input type="text" placeholder="搜索">
         <span class="back-btn" @click="openAddFriend">+</span>
       </div>
+      <div class="friend-list" @scroll="friendScroll">
+        <div
+            v-for="friend in friends"
+            :key="friend.userId"
+            class="friend"
+            :class="{ active: currentFriend && currentFriend.userId === friend.userId }"
+            @click="lockFriendWindow(friend.userId)"
+        >
+          <div class="avatar">
+            <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.username">
+            <span v-else>{{ friend.username.charAt(0) }}</span>
+          </div>
+          <div class="info">
+            <div class="name">{{ friend.username }}</div>
+            <div class="last-msg">{{ friend.lastMessage }}</div>
+          </div>
+          <div class="friend-status">
+            <span class="online-dot" :class="{ online: friend.isOnline }"></span>
+            <span class="status-label">{{ friend.isOnline ? '在线' : '离线' }}</span>
+          </div>
+          <div class="time">{{ friend.time }}</div>
+          <div v-if="friend.unread > 0" class="unread-badge">
+            {{ friend.unread }}
+          </div>
+        </div>
 
-      <div
-          v-for="friend in friends"
-          :key="friend.userId"
-          class="friend"
-          :class="{ active: currentFriend && currentFriend.userId === friend.userId }"
-          @click="lockFriendWindow(friend.userId)"
-      >
-        <div class="avatar">
-          <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.username">
-          <span v-else>{{ friend.username.charAt(0) }}</span>
-        </div>
-        <div class="info">
-          <div class="name">{{ friend.username }}</div>
-          <div class="last-msg">{{ friend.lastMessage }}</div>
-        </div>
-        <div class="friend-status">
-          <span class="online-dot" :class="{ online: friend.isOnline }"></span>
-          <span class="status-label">{{ friend.isOnline ? '在线' : '离线' }}</span>
-        </div>
-        <div class="time">{{ friend.time }}</div>
-        <div v-if="friend.unread > 0" class="unread-badge">
-          {{ friend.unread }}
-        </div>
+        <!--      <div v-if="loading" class="loading-more">-->
+        <!--        加载中...-->
+        <!--      </div>-->
+        <!--      <div v-if="noMoreData" class="no-more-data">-->
+        <!--        没有更多数据了-->
+        <!--      </div>-->
       </div>
-
-<!--      <div v-if="loading" class="loading-more">-->
-<!--        加载中...-->
-<!--      </div>-->
-<!--      <div v-if="noMoreData" class="no-more-data">-->
-<!--        没有更多数据了-->
-<!--      </div>-->
     </div>
 
     <!-- 右侧聊天窗口 -->
@@ -52,7 +53,12 @@
       </div>
 
       <!-- 聊天内容区域 -->
-      <div class="messages" ref="messagesContainer">
+      <div class="messages" ref="messagesContainer" @scroll="handleMessagesScroll">
+        <!-- 加载更多提示 -->
+        <div v-if="loadingHistory" class="loading-history">
+          加载历史消息中...
+        </div>
+
         <!-- 历史消息 -->
         <div
             v-for="message in chatMessages"
@@ -103,7 +109,7 @@
 import {removeToken} from "@/utils/auth.js";
 import router from "@/router";
 import AddFriend from "./AddFriend.vue";
-import {getFriendLastMes} from "@/api/chatMessage.js";
+import {getFriendLastMes, getHistoryMes} from "@/api/chatMessage.js";
 import {closeWebSocket, connectWebSocket, getSocketInstance} from '@/utils/websocket';
 import {getObject, setObject} from '@/utils/localStorage.js'
 import {ElMessage} from "element-plus";
@@ -135,11 +141,18 @@ export default {
       },
       // 聊天窗口状态
       showChatWindow: false,
-      friendHistoryMessage: [], // 存储聊天消息
       newMessage: '', // 输入框内容
       socket: null, // WebSocket实例,
       chatMessages: [],
-      currentUser: {}
+      currentUser: {},
+      historyPageNum: 1, // 当前页码（从1开始）
+      historyPageSize: 20, // 每页条数
+      hasMoreHistory: false, // 是否还有更多历史消息
+      loadingHistory: false, // 是否正在加载
+      isScrollingUp: false, // 是否正在向上滚动
+      lastScrollTop: 0, // 记录滚动位置
+      prevScrollHeight: 0, // 记录加载前容器高度
+      lastKnownPosition: 0, // 记录上次已知的滚动位置
     }
   },
   async created() {
@@ -193,9 +206,35 @@ export default {
       if(friendId == null){
         return
       }
-      this.currentFriend = this.friends.find(friend => friend.userId === friendId);
       this.showChatWindow = true;
+
+      // 缓存当前好友信息
+      this.currentFriend = this.friends.find(friend => friend.userId === friendId);
       setObject('currentFriend', this.currentFriend);
+
+      // 清空历史消息所需参数
+      this.clearHistoryMes();
+
+      // 加载历史消息
+      this.loadHistoryMessages();
+    },
+
+    // 加载历史消息方法
+    async loadHistoryMessages() {
+      // 查询历史消息
+      await this.getHistoryMes();
+      // 滚动到底部
+      this.scrollToBottom();
+    },
+
+    // 滚动到底部
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const container = this.$refs.messagesContainer;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
     },
 
     // 新增关闭聊天窗口方法
@@ -208,11 +247,11 @@ export default {
         lastMessage: ''
       };
     },
+
     // 初始化WebSocket连接
     initWebSocket() {
       this.socket = getSocketInstance()
       if(this.socket == null){
-        console.log('socket is null')
         return;
       }
 
@@ -240,22 +279,71 @@ export default {
       });
     },
 
-    // 加载历史消息
-    async loadHistoryMessages() {
-      if (!this.currentFriend) return;
+    // 加载更多历史消息
+    async loadMoreHistory() {
+      await this.getHistoryMes();
 
-      try {
-        const res = await getMessageHistory({
-          friendId: this.currentFriend.userId,
-          limit: 20
-        });
-        this.friendHistoryMessage = res.data.map(msg => ({
-          ...msg,
-          status: msg.sender === this.currentUser.id ? 'sender' : 'receiver'
-        }));
-        this.scrollToBottom();
-      } catch (error) {
-        console.error('加载历史消息失败:', error);
+      // todo 这里保持滚动位置有问题，获取到新消息时，虽然加载了历史消息但不要滚动页面
+      // 保持滚动位置
+      this.$nextTick(() => {
+        const container = this.$refs.messagesContainer;
+        if (container) {
+          const prevHeight = container.scrollHeight;
+          const prevScroll = container.scrollTop;
+          container.scrollTop = container.scrollHeight - prevHeight + prevScroll;
+        }
+      });
+    },
+
+    // 分页查询历史记录
+    async getHistoryMes(){
+      const req = {
+        senderId: this.currentUser.id,
+        receiverId: this.currentFriend.userId,
+        pageNum: this.historyPageNum,
+        pageSize: this.historyPageSize
+      };
+
+      // loading打开
+      this.loadingHistory = true;
+      // 调用接口查询
+      const res = await getHistoryMes(req);
+      // 将新消息插入到数组开头
+      this.chatMessages = [...res.data.rows, ...this.chatMessages];
+      // loading关闭
+      this.loadingHistory = false;
+
+      // 判断是否还有更多数据  当前页码 < 总页数，说明还有更多数据
+      if(this.historyPageNum < res.data.totalPage){
+        this.hasMoreHistory = true;
+      }else{
+        this.hasMoreHistory = false
+      }
+    },
+
+    // 处理消息窗口滚动
+    handleMessagesScroll(event) {
+      const container = event.target;
+      this.isScrollingUp = container.scrollTop < this.lastScrollTop;
+      this.lastScrollTop = container.scrollTop;
+
+      // 只在向上滚动、未在加载、还有数据且未触发过时检查
+      if (this.isScrollingUp &&
+          !this.loadingHistory &&
+          this.hasMoreHistory &&
+          !this.scrollTriggered
+      ) {
+        // 计算距离顶部的剩余可滚动距离
+        const remainingSpace = container.scrollHeight - container.clientHeight - container.scrollTop;
+
+        // todo 这里可能还需要优化 要根据上次获取到消息的数据高度判断
+        // 当剩余空间大于650px时触发加载（可根据实际情况调整）
+        if (remainingSpace > 650) {
+          this.historyPageNum ++;
+          this.scrollTriggered = true;
+          this.prevScrollHeight = container.scrollHeight;
+          this.loadMoreHistory();
+        }
       }
     },
 
@@ -304,32 +392,37 @@ export default {
       return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
     },
 
-    // 滚动到底部
-    scrollToBottom() {
-      this.$nextTick(() => {
-        const container = this.$refs.messagesContainer;
-        if (container) {
-          container.scrollTop = container.scrollHeight;
-        }
-      });
-    },
-
     // 滚动事件处理
     friendScroll(event) {
       // todo 按滚动做分页查询
     },
+
+    // 清空历史消息所需要的参数
+    clearHistoryMes(){
+      this.chatMessages = [];
+      this.historyPageNum = 1;
+      this.historyPageSize = 20;
+      this.hasMoreHistory = false;
+      this.loadingHistory = false;
+      this.isScrollingUp = false;
+      this.lastScrollTo = 0;
+      this.prevScrollHeight = 0;
+      this.lastKnownPosition = 0;
+    }
   }
 }
 </script>
 
 <style scoped>
 /* 左侧联系人列表样式 */
-.friend-list {
+.left-container {
   width: 30%;
   background: #eee;
   border-right: 1px solid #ddd;
   display: flex;
   flex-direction: column;
+}
+.friend-list {
   overflow-y: auto;
 }
 
@@ -347,7 +440,6 @@ export default {
 }
 
 .sticky {
-  position: sticky;
   top: 0;
   z-index: 10;
   padding: 10px;
@@ -428,9 +520,6 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.chat-window {
   transition: all 0.3s ease;
 }
 
@@ -452,6 +541,13 @@ export default {
   cursor: pointer;
 }
 
+.loading-history {
+  padding: 10px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
 .messages {
   flex: 1;
   padding: 15px;
@@ -465,12 +561,17 @@ export default {
   flex-direction: column;
 }
 
+.messages::-webkit-scrollbar {
+  display: none;
+}
+
 .message {
   margin-bottom: 15px;
   max-width: 70%;
   display: flex;
   align-self: flex-start;
   animation: fadeIn 0.3s ease-out;
+  text-align: left;
 }
 
 .message.receiver {
