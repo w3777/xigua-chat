@@ -78,7 +78,21 @@
       <div class="input-container">
         <div class="input-tools">
           <div class="left-tools">
-            <i class="icon-tool">😊</i>
+            <!-- 模板部分 -->
+            <div class="emoji-trigger-container">
+              <i class="icon-tool emoji-trigger" @click.stop="toggleEmojiPicker">😊</i>
+
+              <div v-if="showEmojiPicker" class="emoji-picker-floating">
+                <emoji-picker
+                    :native="true"
+                    :disable-skin-tones="true"
+                    :display-recent="true"
+                    :hide-search="true"
+                    :show-categories="true"
+                    @select="addEmoji"
+                />
+              </div>
+            </div>
             <i class="icon-tool">📷</i>
           </div>
           <div class="right-tools">
@@ -113,6 +127,8 @@ import {getFriendLastMes, getHistoryMes} from "@/api/chatMessage.js";
 import {closeWebSocket, connectWebSocket, getSocketInstance} from '@/utils/websocket';
 import {getObject, setObject} from '@/utils/localStorage.js'
 import {ElMessage} from "element-plus";
+import EmojiPicker from "vue3-emoji-picker";
+import "vue3-emoji-picker/css";
 
 export default {
   name: 'WeChatApp',
@@ -123,12 +139,14 @@ export default {
     }
   },
   components: {
-    AddFriend
+    AddFriend,
+    EmojiPicker
   },
   data() {
     return {
       // 添加好友对话框状态
       showAddFriend: false,
+      showEmojiPicker: false,
       // 顶部用户ID (其他页面带过来的)
       topUserId: null,
       friends: [],
@@ -408,7 +426,16 @@ export default {
       this.lastScrollTo = 0;
       this.prevScrollHeight = 0;
       this.lastKnownPosition = 0;
-    }
+    },
+
+    addEmoji(emoji) {
+      this.newMessage += emoji.i; // 在输入框中添加表情
+      this.showEmojiPicker = false; // 选择后关闭表情框
+    },
+
+    toggleEmojiPicker() {
+      this.showEmojiPicker = !this.showEmojiPicker;
+    },
   }
 }
 </script>
@@ -619,6 +646,37 @@ export default {
   font-size: 20px;
   cursor: pointer;
   color: #7d7d7d;
+}
+
+/* 样式部分 */
+.emoji-trigger-container {
+  position: relative;
+  display: inline-block;
+}
+
+.emoji-trigger {
+  cursor: pointer;
+  font-size: 20px;
+  padding: 5px 8px;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.emoji-trigger:hover {
+  background: #f0f0f0;
+  transform: scale(1.1);
+}
+
+.emoji-picker-floating {
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+  animation: popup 0.2s ease-out;
 }
 
 .right-tools {

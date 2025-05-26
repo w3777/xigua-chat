@@ -95,7 +95,7 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin-bottom: 80px;
+  margin-bottom: 200px;
 }
 .form-title {
   text-align: center;

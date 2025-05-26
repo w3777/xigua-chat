@@ -458,6 +458,12 @@ export default {
 
 .friend-content{
   height: 92%;
+  overflow-y: auto;
+}
+
+.friend-content::-webkit-scrollbar {
+  display: none;
+  width: 0;
 }
 
 .tab-item {
