@@ -69,8 +69,41 @@
               'receiver': message.senderId !== currentUser.id
             }"
         >
-          <div class="content">
-            {{ message.message }}
+
+          <!-- 接收方头像 -->
+          <div v-if="message.senderId !== currentUser.id" class="avatar-container">
+            <div class="message-avatar">
+              <img v-if="currentFriend.avatar" :src="currentFriend.avatar" :alt="currentFriend.username">
+              <span v-else>{{ currentFriend.username.charAt(0) }}</span>
+            </div>
+          </div>
+
+          <!-- 消息内容 -->
+          <div class="message-content">
+            <div
+                class="message-header"
+                :class="{
+                    'sender': message.senderId === currentUser.id,
+                    'receiver': message.senderId !== currentUser.id
+                  }">
+              <span class="message-time">{{ message.createTime }}</span>
+            </div>
+            <div class="content">
+              {{ message.message }}
+            </div>
+            <div class="message-bottom">
+              <span v-if="message.senderId === currentUser.id" class="read-status">
+                {{ message.read ? '已读' : '未读' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 发送方头像 -->
+          <div v-if="message.senderId === currentUser.id" class="avatar-container">
+            <div class="message-avatar">
+              <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.username">
+              <span v-else>{{ currentUser.username.charAt(0) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -103,13 +136,27 @@
 
         <!-- 输入和发送行 -->
         <div class="input-row">
-          <input
-              type="text"
-              v-model="newMessage"
-              @keyup.enter="sendMessage"
-              placeholder="发送消息"
-          >
-          <button class="send-btn" @click="sendMessage">发送(S)</button>
+          <div class="textarea-container">
+            <textarea
+                type="text"
+                v-model="newMessage"
+                @keyup.enter="handleKeyDown"
+                placeholder="发送消息"
+                rows="1"
+                @input=""
+                ref="messageInput"
+                :class="{ 'error': showEmptyError }"
+            ></textarea>
+            <div class="send-btn-wrapper">
+              <transition name="fade">
+                <div v-if="showEmptyWarn" class="message-empty-warn">
+                  <span class="error-text">不能发送空白信息</span>
+                  <span class="error-arrow"></span>
+                </div>
+              </transition>
+              <button class="send-btn" @click="sendMessage">发送(S)</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -129,6 +176,7 @@ import {getObject, setObject} from '@/utils/localStorage.js'
 import {ElMessage} from "element-plus";
 import EmojiPicker from "vue3-emoji-picker";
 import "vue3-emoji-picker/css";
+import defaultAvatar from "@/static/images/user_default.png";
 
 export default {
   name: 'WeChatApp',
@@ -157,6 +205,8 @@ export default {
         avatar: '',
         lastMessage: ''
       },
+      defaultAvatar: defaultAvatar, // 默认头像
+      showEmptyWarn: false, // 空白消息提示
       // 聊天窗口状态
       showChatWindow: false,
       newMessage: '', // 输入框内容
@@ -365,9 +415,29 @@ export default {
       }
     },
 
+    // 校验消息
+    checkMessage(){
+      const messageText = this.newMessage.trim();
+
+      // 检查是否空白消息
+      if (!messageText) {
+        this.showEmptyWarn = true;
+        setTimeout(() => {
+          this.showEmptyWarn = false;
+        }, 2000); // 2秒后自动隐藏错误提示
+        return false;
+      }
+
+      return true;
+    },
+
     // 发送消息
     sendMessage() {
-      if (!this.newMessage.trim()) return;
+      // 校验消息
+      const checkFlag = this.checkMessage();
+      if(!checkFlag){
+        return;
+      }
 
       if(this.currentUser == null){
         return;
@@ -382,7 +452,7 @@ export default {
         receiverId: this.currentFriend.userId,
         message: this.newMessage.trim(),
         messageType: 'chat',
-        createTime : Date.now()
+        createTime : this.formatDate(new Date())
       };
 
       // 立即显示到聊天窗口
@@ -395,19 +465,51 @@ export default {
 
     },
 
+    // 格式化日期 xxxx-xx-xx xx:xx:xx
+    formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以加1
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    },
+
+    // 处理键盘输入
+    handleKeyDown(event) {
+      if(event.key !== 'Enter') {
+        return;
+      }
+
+      // 校验消息
+      const checkFlag = this.checkMessage();
+      if(!checkFlag){
+        event.preventDefault();
+        return;
+      }
+
+      // Shift+Enter 或 Ctrl+Enter 换行 - 允许默认行为
+      if (event.shiftKey || event.ctrlKey) {
+        return; // 让浏览器执行默认的换行行为
+      }
+
+      // 普通Enter键发送消息
+      event.preventDefault(); // 阻止默认换行行为
+
+      // 只有当有内容时才发送
+      if (this.newMessage.trim()) {
+        this.sendMessage();
+      }
+    },
+
     // 更新消息状态
     updateMessageStatus(messageId, status) {
       const message = this.messages.find(m => m.id === messageId);
       if (message) {
         message.status = status;
       }
-    },
-
-    // 消息时间格式化
-    formatTime(date) {
-      if (!date) return '';
-      const d = new Date(date);
-      return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
     },
 
     // 滚动事件处理
@@ -598,29 +700,30 @@ export default {
   display: flex;
   align-self: flex-start;
   animation: fadeIn 0.3s ease-out;
-  text-align: left;
 }
 
 .message.receiver {
   align-self: flex-start;
+  text-align: left;
 }
 
 .message.sender {
   margin-left: auto;
   justify-content: flex-end;
   align-self: flex-end;
-  flex-direction: row-reverse;
+  text-align: right;
+  align-items: flex-start;
 }
 
 .message .content {
-  padding: 10px 15px;
+  padding: 8px 10px;
   border-radius: 4px;
   display: inline-block;
   position: relative;
-  margin: 0 10px;
-  max-width: 70%;
+  /* 确保消息内容中的换行符有效 */
+  white-space: pre-wrap;
+  word-break: break-word;
 }
-
 .message.receiver .content {
   background: white;
   border: 1px solid #e5e5e5;
@@ -635,6 +738,7 @@ export default {
   justify-content: space-between;
   width: 100%;
   padding-bottom: 8px;
+  height: 20%;
 }
 
 .left-tools {
@@ -686,48 +790,125 @@ export default {
 .input-row {
   display: flex;
   width: 100%;
+  position: relative;
+  height: 80%;
 }
 
-.input-row input {
+.textarea-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.input-row textarea {
+  width: 100%;
+  height: 100%;
+  padding: 8px 50px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+  overflow-y: auto;
   flex: 1;
   padding: 8px 12px;
-  border: none;
+  border: 1px solid #ddd;
   border-radius: 4px;
   outline: none;
+  resize: none;
+  min-height: 40px;
+  max-height: 150px; /* 限制最大高度 */
+  overflow-y: auto; /* 超出时显示滚动条 */
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
 }
 
-.input-row button {
+.input-row textarea::-webkit-scrollbar {
+  display: none;
+}
+
+.input-row textarea.error {
+  border-color: #f56c6c;
+}
+
+.send-btn-wrapper {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.send-btn {
   margin-left: 8px;
-  padding: 0 12px;
+  margin-top: 3px;
   background: #07C160;
   color: white;
   border: none;
   border-radius: 4px;
+  padding: 0 12px;
+  height: 24px;
+  font-size: 12px;
   cursor: pointer;
+  z-index: 2;
+  transition: all 0.2s;
+}
+
+.send-btn:hover {
+  background: #06ad56;
+}
+
+.message-empty-warn {
+  padding: 4px 8px;
+  background: #fef0f0;
+  color: #f56c6c;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  animation: fadeIn 0.3s;
+  position: absolute;
+  bottom: calc(100% + 5px);
+}
+
+.error-arrow {
+  position: absolute;
+  bottom: -6px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #ffccc7;
+}
+
+.error-arrow::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #fff2f2;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .input-container {
   padding: 10px;
   background: #f5f5f5;
   border-top: 1px solid #e6e6e6;
-}
-
-.input-row input {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  outline: none;
-}
-
-.send-btn {
-  margin-left: 8px;
-  padding: 0 15px;
-  background: #07C160;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  height: 100%;
+  max-height: 130px;
 }
 
 .main-content {
@@ -830,4 +1011,56 @@ export default {
     transform: translateY(0);
   }
 }
+
+.message-header {
+  margin-bottom: 5px;
+  align-items: center;
+}
+
+.message-header .sender {
+  text-align: right;
+}
+
+.message-header.receiver {
+  text-align: left;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.read-status {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+}
+
+.message.sender .message-content {
+  order: -1; /* Make content appear before avatar */
+  margin-right: 10px;
+}
+
+.message.receiver .message-content {
+  margin-left: 10px;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: #07C160;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 保持图片比例填充 */
+}
+
 </style>
