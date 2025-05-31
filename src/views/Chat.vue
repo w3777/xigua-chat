@@ -74,7 +74,7 @@
           <div v-if="message.senderId !== currentUser.id" class="avatar-container">
             <div class="message-avatar">
               <img v-if="currentFriend.avatar" :src="currentFriend.avatar" :alt="currentFriend.username">
-              <span v-else>{{ currentFriend.username.charAt(0) }}</span>
+              <span v-else>{{ currentFriend && currentFriend.username ? currentFriend.username[0] : '' }}</span>
             </div>
           </div>
 
@@ -249,7 +249,7 @@ export default {
       this.showAddFriend = true;
     },
 
-    // 关闭添加好友对话框
+    // 分页获取左侧好友列表
     getFriendLastMes(topUserId) {
       const data = {
         topUserId: topUserId,
@@ -325,26 +325,51 @@ export default {
 
       this.socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        // 处理收到的消息
         this.handleReceiveMessage(data);
-
-        this.getFriendLastMes(this.topUserId).then(() => {
-          this.lockFriendWindow(this.topUserId)
-        })
       };
     },
 
-    // 处理收到的消息
+    // 根据不同类型 处理收到的消息
     handleReceiveMessage(data) {
-      if(data.messageType != 'chat'){
-        return;
+      const messageType = data.messageType;
+      const subType = data.subType;
+      if(messageType == 'chat'){ // 聊天消息
+        this.receiveChatMessage(data);
+      }else if(messageType == 'notify' && subType == 'friend_online'){ // 好友上线通知
+        this.receiveFriendOnlineNotify();
+      }else if(messageType == 'notify' && subType == 'friend_offline'){  // 好友下线通知
+        this.receiveFriendOfflineNotify();
       }
+    },
+
+    // 接收聊天消息
+    receiveChatMessage(data){
       this.chatMessages.push({
         id: data.messageId,
         sender: data.senderId,
         receiverId: data.receiverId,
         messageType: data.messageType,
-        message: data.message
+        message: data.message,
+        createTime: data.createTime
       });
+
+      // 刷新左侧好友最后一条消息
+      this.getFriendLastMes().then(() => {
+        this.lockFriendWindow(this.topUserId)
+      })
+    },
+
+    // 接收好友上线通知
+    receiveFriendOnlineNotify(){
+      // 刷新左侧好友列表
+      this.getFriendLastMes()
+    },
+
+    // 接收好友下线通知
+    receiveFriendOfflineNotify(){
+      // 刷新左侧好友列表
+      this.getFriendLastMes()
     },
 
     // 加载更多历史消息
