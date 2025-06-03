@@ -93,7 +93,7 @@
             </div>
             <div class="message-bottom">
               <span v-if="message.senderId === currentUser.id" class="read-status">
-                {{ message.read ? '已读' : '未读' }}
+                {{ message.isRead ? '已读' : '未读' }}
               </span>
             </div>
           </div>
@@ -203,7 +203,8 @@ export default {
         userId: '',
         username: '',
         avatar: '',
-        lastMessage: ''
+        lastMessage: '',
+        isOnline: false,
       },
       defaultAvatar: defaultAvatar, // 默认头像
       showEmptyWarn: false, // 空白消息提示
@@ -280,11 +281,29 @@ export default {
       this.currentFriend = this.friends.find(friend => friend.userId === friendId);
       setObject('currentFriend', this.currentFriend);
 
+      this.$nextTick(() => {
+        // 告诉服务端当前打开的好友聊天框
+        this.notifyFriendOpenChatWindow();
+      });
+
       // 清空历史消息所需参数
       this.clearHistoryMes();
 
       // 加载历史消息
       this.loadHistoryMessages();
+    },
+
+    // 告诉服务端当前打开的好友聊天框
+    notifyFriendOpenChatWindow(){
+      const message = {
+        senderId: this.currentUser.id,
+        receiverId: this.currentFriend.userId,
+        message: this.newMessage.trim(),
+        messageType: 'notify',
+        subType: 'switch_friend',
+        createTime : this.formatDate(new Date())
+      };
+      this.socket.send(JSON.stringify(message))
     },
 
     // 加载历史消息方法
@@ -300,6 +319,8 @@ export default {
       this.$nextTick(() => {
         const container = this.$refs.messagesContainer;
         if (container) {
+          // 立即设置滚动位置，没有平滑效果
+          container.style.scrollBehavior = 'auto';
           container.scrollTop = container.scrollHeight;
         }
       });
@@ -334,17 +355,34 @@ export default {
     handleReceiveMessage(data) {
       const messageType = data.messageType;
       const subType = data.subType;
-      if(messageType == 'chat'){ // 聊天消息
+      if(messageType == 'chat' && subType == 'mes_receive'){ // 聊天消息
         this.receiveChatMessage(data);
       }else if(messageType == 'notify' && subType == 'friend_online'){ // 好友上线通知
-        this.receiveFriendOnlineNotify();
+        this.receiveFriendOnlineNotify(data);
       }else if(messageType == 'notify' && subType == 'friend_offline'){  // 好友下线通知
-        this.receiveFriendOfflineNotify();
+        this.receiveFriendOfflineNotify(data);
+      }else if(messageType == 'notify' && subType == 'mes_read'){ // 消息已读通知
+        this.receiveMessageReadNotify(data);
       }
     },
 
     // 接收聊天消息
     receiveChatMessage(data){
+      const senderId = data.senderId;
+      // 判断是否在当前聊天窗口
+      if (this.currentFriend && this.currentFriend.userId === senderId){
+        this.currentChatWindow(data)
+      }
+
+      // 刷新左侧好友最后一条消息
+      this.getFriendLastMes().then(() => {
+        this.lockFriendWindow(this.topUserId)
+      })
+    },
+
+    // 在当前聊天窗口
+    currentChatWindow(data) {
+      // 在聊天窗口添加新消息
       this.chatMessages.push({
         id: data.messageId,
         sender: data.senderId,
@@ -354,20 +392,32 @@ export default {
         createTime: data.createTime
       });
 
-      // 刷新左侧好友最后一条消息
-      this.getFriendLastMes().then(() => {
-        this.lockFriendWindow(this.topUserId)
-      })
+      // 滚动到底部
+      this.$nextTick(() => {
+        this.scrollToBottom();
+      });
     },
 
     // 接收好友上线通知
-    receiveFriendOnlineNotify(){
+    receiveFriendOnlineNotify(data){
+      const senderId = data.senderId;
+      // 好友上线的是当前聊天窗口的好友，设置为在线
+      if (this.currentFriend && this.currentFriend.userId === senderId){
+        this.currentFriend.isOnline = true;
+      }
+
       // 刷新左侧好友列表
       this.getFriendLastMes()
     },
 
     // 接收好友下线通知
-    receiveFriendOfflineNotify(){
+    receiveFriendOfflineNotify(data){
+      const senderId = data.senderId;
+      // 好友下线的是当前聊天窗口的好友，设置为离线
+      if (this.currentFriend && this.currentFriend.userId === senderId){
+        this.currentFriend.isOnline = false;
+      }
+
       // 刷新左侧好友列表
       this.getFriendLastMes()
     },
@@ -477,6 +527,7 @@ export default {
         receiverId: this.currentFriend.userId,
         message: this.newMessage.trim(),
         messageType: 'chat',
+        subType: 'mes_send',
         createTime : this.formatDate(new Date())
       };
 
@@ -563,6 +614,19 @@ export default {
     toggleEmojiPicker() {
       this.showEmojiPicker = !this.showEmojiPicker;
     },
+
+    // 接收消息已读通知
+    receiveMessageReadNotify(data){
+      const receiverId = data.receiverId;
+      if(this.currentUser.id == receiverId){
+        // 根据服务端发过来的已读消息id，改变消息状态
+        this.chatMessages.forEach(message => {
+          if(message.chatMessageId == data.chatMessageId){
+            message.isRead = true;
+          }
+        })
+      }
+    }
   }
 }
 </script>
