@@ -62,8 +62,9 @@
         <!-- 历史消息 -->
         <div
             v-for="message in chatMessages"
-            :key="message.id"
+            :key="message.chatMessageId"
             class="message"
+            :message="JSON.stringify(message)"
             :class="{
               'sender': message.senderId === currentUser.id,
               'receiver': message.senderId !== currentUser.id
@@ -271,26 +272,29 @@ export default {
     },
 
     // 锁定好友聊天窗口
-    lockFriendWindow(friendId) {
+    async lockFriendWindow(friendId) {
       if(friendId == null){
         return
       }
       this.showChatWindow = true;
 
       // 缓存当前好友信息
-      this.currentFriend = this.friends.find(friend => friend.userId === friendId);
-      setObject('currentFriend', this.currentFriend);
-
-      this.$nextTick(() => {
-        // 告诉服务端当前打开的好友聊天框
+      if(friendId != this.currentFriend.userId){
+        this.currentFriend = this.friends.find(friend => friend.userId === friendId);
+        setObject('currentFriend', this.currentFriend);
+        // 告诉服务端当前打开的好友聊天框 (实时消息已读需要用到)
         this.notifyFriendOpenChatWindow();
-      });
+      }
+
 
       // 清空历史消息所需参数
       this.clearHistoryMes();
 
       // 加载历史消息
-      this.loadHistoryMessages();
+      await this.loadHistoryMessages();
+
+      // 获取当前窗口可视化的未读消息 提交到服务端批量已读
+      this.getVisibleMessages()
     },
 
     // 告诉服务端当前打开的好友聊天框
@@ -357,12 +361,14 @@ export default {
       const subType = data.subType;
       if(messageType == 'chat' && subType == 'mes_receive'){ // 聊天消息
         this.receiveChatMessage(data);
+      }else if(messageType == 'chat' && subType == 'mes_send_ack'){ // 消息发送确认
+        this.receiveMessageSendAck(data);
+      }else if(messageType == 'chat' && subType == 'mes_read'){ // 消息已读通知
+        this.receiveMessageReadNotify(data);
       }else if(messageType == 'notify' && subType == 'friend_online'){ // 好友上线通知
         this.receiveFriendOnlineNotify(data);
       }else if(messageType == 'notify' && subType == 'friend_offline'){  // 好友下线通知
         this.receiveFriendOfflineNotify(data);
-      }else if(messageType == 'notify' && subType == 'mes_read'){ // 消息已读通知
-        this.receiveMessageReadNotify(data);
       }
     },
 
@@ -380,11 +386,24 @@ export default {
       })
     },
 
+    // 接收消息发送确认
+    receiveMessageSendAck(data){
+      const message = JSON.parse(data.message);
+      const key = Object.keys(message)[0];
+      const value = Object.values(message)[0];
+
+      // 找到对应的消息并更新消息id  (可能会消息内容一样，也要判断)
+      const msg = this.chatMessages.find(m => m.message === key && m.createTime == data.createTime);
+      if (msg) {
+        msg.chatMessageId = value;
+      }
+    },
+
     // 在当前聊天窗口
     currentChatWindow(data) {
       // 在聊天窗口添加新消息
       this.chatMessages.push({
-        id: data.messageId,
+        chatMessageId: data.chatMessageId,
         sender: data.senderId,
         receiverId: data.receiverId,
         messageType: data.messageType,
@@ -523,12 +542,14 @@ export default {
       }
 
       const message = {
+        chatMessageId: '',
         senderId: senderId,
         receiverId: this.currentFriend.userId,
         message: this.newMessage.trim(),
         messageType: 'chat',
         subType: 'mes_send',
-        createTime : this.formatDate(new Date())
+        isRead: false,
+        createTime : Date.now()
       };
 
       // 立即显示到聊天窗口
@@ -537,8 +558,6 @@ export default {
       this.scrollToBottom();
       // 发送消息
       this.socket.send(JSON.stringify(message));
-
-
     },
 
     // 格式化日期 xxxx-xx-xx xx:xx:xx
@@ -618,13 +637,67 @@ export default {
     // 接收消息已读通知
     receiveMessageReadNotify(data){
       const receiverId = data.receiverId;
-      if(this.currentUser.id == receiverId){
-        // 根据服务端发过来的已读消息id，改变消息状态
-        this.chatMessages.forEach(message => {
-          if(message.chatMessageId == data.chatMessageId){
-            message.isRead = true;
+      const message = JSON.parse(data.message);
+      const readChatMessageIds = JSON.parse(message.readChatMessageIds);
+      if(this.currentUser.id != receiverId){
+        return;
+      }
+      if(readChatMessageIds == null || readChatMessageIds == 0){
+        return;
+      }
+
+      // 根据服务端发过来的已读消息id，改变消息状态
+      this.chatMessages.forEach(message => {
+        if(readChatMessageIds.includes(message.chatMessageId)){
+          message.isRead = true;
+        }
+      })
+    },
+
+    // 获取可视区域的消息
+    getVisibleMessages(){
+      const container = this.$refs.messagesContainer;
+      if (!container) return;
+
+      // 计算可视区域的消息范围
+      const messages = container.getElementsByClassName('message');
+
+      if (!messages || messages.length === 0) {
+        return;
+      }
+
+      let visibleUnReadMessages = [];
+      // 获取容器的可视区域边界
+      const containerRect = container.getBoundingClientRect();
+      const containerTop = containerRect.top;
+      const containerBottom = containerTop + container.clientHeight;
+
+      // 检查每条消息是否在可视区域内
+      Array.from(messages).forEach((mes) => {
+        const msgRect = mes.getBoundingClientRect();
+        const msgTop = msgRect.top;
+        const msgBottom = msgRect.bottom;
+
+        // 判断消息是否至少有一部分在可视区域内
+        if (msgBottom > containerTop && msgTop < containerBottom) {
+          const message = JSON.parse(mes.getAttribute('message'));
+
+          // 如果消息是当前用户发送的且未读
+          if (message.receiverId == this.currentUser.id && message.isRead == false) {
+            visibleUnReadMessages.push(message.chatMessageId);
           }
-        })
+        }
+      });
+
+      // 发送给服务端标记已读
+      if (visibleUnReadMessages.length > 0) {
+        this.socket.send(JSON.stringify({
+          senderId: this.currentUser.id,
+          receiverId: this.currentFriend.userId,
+          message: JSON.stringify(visibleUnReadMessages),
+          messageType: 'chat',
+          subType:'mes_read'
+        }))
       }
     }
   }
