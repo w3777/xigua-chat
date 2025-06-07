@@ -541,7 +541,7 @@ export default {
         return;
       }
 
-      const message = {
+      let message = {
         chatMessageId: '',
         senderId: senderId,
         receiverId: this.currentFriend.userId,
@@ -558,6 +558,14 @@ export default {
       this.scrollToBottom();
       // 发送消息
       this.socket.send(JSON.stringify(message));
+
+      // 发送消息后，如果1秒后没用接收到服务端回传的消息id，提示消息发送失败
+      setTimeout(() => {
+        message = this.chatMessages.find(m => m.message === message.message && m.createTime == message.createTime)
+        if(message.chatMessageId == null || message.chatMessageId == ''){
+          ElMessage({ message: '消息发送失败', type: 'error', plain: true})
+        }
+      }, 1000)
     },
 
     // 格式化日期 xxxx-xx-xx xx:xx:xx
