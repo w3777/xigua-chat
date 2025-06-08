@@ -71,10 +71,10 @@
                       <span class="status-rejected" v-if="request.flowStatus == 2">已拒绝</span>
                     </div>
                     <div class="action-buttons" v-if="request.flowStatus == 0">
-                      <button class="accept-btn" @click.stop="handleRequest(request.id, 1)">接受</button>
-                      <button class="reject-btn" @click.stop="handleRequest(request.id, 2)">拒绝</button>
+                      <button class="accept-btn" @click.stop="handleRequest(request.requestId, 1)">接受</button>
+                      <button class="reject-btn" @click.stop="handleRequest(request.requestId, 2)">拒绝</button>
                     </div>
-                    <button v-if="request.flowStatus == 2" class="retry-btn" @click.stop="handleRequest(request.id, 1)">
+                    <button v-if="request.flowStatus == 2" class="retry-btn" @click.stop="handleRequest(request.requestId, 1)">
                       <i class="icon-refresh"></i> 重新添加
                     </button>
                   </div>
@@ -267,7 +267,7 @@ export default {
       }
     },
     handleRequest(requestId, flowStatus) {
-      const request = this.receivedRequests.find(req => req.id === requestId)
+      const request = this.receivedRequests.find(req => req.requestId === requestId)
       if (!request) return
 
       const reqData = {

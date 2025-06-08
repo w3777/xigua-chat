@@ -221,8 +221,19 @@ export default {
       loadingHistory: false, // 是否正在加载
       isScrollingUp: false, // 是否正在向上滚动
       lastScrollTop: 0, // 记录滚动位置
-      prevScrollHeight: 0, // 记录加载前容器高度
-      lastKnownPosition: 0, // 记录上次已知的滚动位置
+      chatContainerRect: 0,
+      chatContainerTop: 0,
+      chatContainerBottom: 0,
+      nextLoadMesIndex: 4, // 下一次加载消息的索引
+      loadedPages: new Set(), // 已加载的页面
+      visibleUnReadMessages: new Set(), // 可视区域未读消息
+      lastScrollPosition: 0,
+      lastScrollTime: 0,
+      scrollSpeed: 0, // px/ms
+      scrollUnReadTimer: null,
+      fastScrollThreshold: 2, // px/ms 超过这个值算快速滑动
+      slowSubmitDelay: 300, // 慢速滑动提交延迟
+      fastSubmitDelay: 1000, // 快速滑动批量提交延迟
     }
   },
   async created() {
@@ -236,6 +247,8 @@ export default {
         this.lockFriendWindow(currentFriendId)
       }
     })
+
+    // todo 需要优化 websocket连接应该是第一个执行的方法
     this.initWebSocket();
 
   },
@@ -285,7 +298,6 @@ export default {
         // 告诉服务端当前打开的好友聊天框 (实时消息已读需要用到)
         this.notifyFriendOpenChatWindow();
       }
-
 
       // 清空历史消息所需参数
       this.clearHistoryMes();
@@ -483,28 +495,115 @@ export default {
       }
     },
 
-    // 处理消息窗口滚动
+    // 处理消息窗口滚动 （分页查询历史消息、提交未读到服务端）
     handleMessagesScroll(event) {
       const container = event.target;
-      this.isScrollingUp = container.scrollTop < this.lastScrollTop;
-      this.lastScrollTop = container.scrollTop;
+      const now = Date.now();
+      const scrollTop = container.scrollTop;
 
-      // 只在向上滚动、未在加载、还有数据且未触发过时检查
-      if (this.isScrollingUp &&
-          !this.loadingHistory &&
-          this.hasMoreHistory &&
-          !this.scrollTriggered
-      ) {
-        // 计算距离顶部的剩余可滚动距离
-        const remainingSpace = container.scrollHeight - container.clientHeight - container.scrollTop;
+      // 计算滑动速度 (px/ms)
+      if (this.lastScrollTime > 0) {
+        const distance = Math.abs(scrollTop - this.lastScrollPosition);
+        const timeDiff = now - this.lastScrollTime;
+        this.scrollSpeed = distance / timeDiff;
+      }
 
-        // todo 这里可能还需要优化 要根据上次获取到消息的数据高度判断
-        // 当剩余空间大于650px时触发加载（可根据实际情况调整）
-        if (remainingSpace > 650) {
-          this.historyPageNum ++;
-          this.scrollTriggered = true;
-          this.prevScrollHeight = container.scrollHeight;
-          this.loadMoreHistory();
+      // 更新滚动状态
+      this.isScrollingUp = scrollTop < this.lastScrollTop;
+      this.lastScrollTop = scrollTop;
+      this.lastScrollPosition = scrollTop;
+      this.lastScrollTime = now;
+
+      // 如果没有更多消息并且用户正在向上滚动
+      if (!this.hasMoreHistory && this.isScrollingUp) {
+        // 收集可视区域未读消息
+        this.processUnreadMessages(container);
+        return;
+      }
+
+      // 防止重复触发加载（未向上滚动 / 正在加载 / 无更多消息）
+      if (!this.isScrollingUp || this.loadingHistory) {
+        return;
+      }
+
+      // 检查是否需要加载更多历史消息
+      this.checkLoadMoreHistory(container);
+
+      // 收集可视区域未读消息
+      this.processUnreadMessages(container);
+    },
+
+    // 检查是否需要加载更多历史消息
+    checkLoadMoreHistory(container){
+      // 获取容器内的消息
+      const messages = container.getElementsByClassName('message');
+      if(messages == null || messages.length == 0 || messages.length < this.nextLoadMesIndex){
+        return;
+      }
+
+      // 获取下一次加载消息 （每次分页加载20条，滑动到15条，加载下一次分页）
+      const message = messages[this.nextLoadMesIndex];
+      if(message == null){
+        return;
+      }
+      const msgRect = message.getBoundingClientRect();
+      const msgTop = msgRect.top;
+      const msgBottom = msgRect.bottom;
+
+      // 每15条消息 滑出聊天窗口顶部 加载下一次分页
+      if (msgBottom > this.chatContainerTop) {
+        // 防止重复加载同一页
+        if (this.loadedPages.has(this.historyPageNum)) {
+          return;
+        }
+
+        // 记录加载过的页码
+        this.loadedPages.add(this.historyPageNum);
+        this.historyPageNum ++;
+        this.loadMoreHistory();
+      }
+    },
+
+    // 收集可视区域未读消息
+    processUnreadMessages(container){
+      this.collectVisibleUnReadMessages(container);
+
+      // 清除之前的定时器
+      clearTimeout(this.scrollUnReadTimer);
+
+      if (this.visibleUnReadMessages == null || this.visibleUnReadMessages.size == 0) {
+        return
+      }
+
+      // 根据滑动速度决定提交策略
+      const isFastScroll = this.scrollSpeed > this.fastScrollThreshold;
+      const delay = isFastScroll ? this.fastSubmitDelay : this.slowSubmitDelay;
+
+      this.scrollUnReadTimer = setTimeout(() => {
+        this.sendUnReadMes();
+      }, delay);
+    },
+
+    // 收集可视区域未读消息
+    collectVisibleUnReadMessages(container){
+      // 获取容器内的消息
+      const messages = container.getElementsByClassName('message');
+      if(messages == null || messages.length == 0){
+        return;
+      }
+
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
+        const msgRect = message.getBoundingClientRect();
+        const msgTop = msgRect.top;
+        const msgBottom = msgRect.bottom;
+        // 消息在可视区域内
+        if (msgBottom > this.chatContainerTop) {
+          const messageObj = JSON.parse(message.getAttribute('message'))
+          // 消息未读
+          if (messageObj.isRead == false && messageObj.receiverId == this.currentUser.id) {
+            this.visibleUnReadMessages.add(messageObj.chatMessageId);
+          }
         }
       }
     },
@@ -628,9 +727,8 @@ export default {
       this.hasMoreHistory = false;
       this.loadingHistory = false;
       this.isScrollingUp = false;
-      this.lastScrollTo = 0;
-      this.prevScrollHeight = 0;
-      this.lastKnownPosition = 0;
+      this.loadedPages = new Set();
+      this.visibleUnReadMessages = new Set();
     },
 
     addEmoji(emoji) {
@@ -674,11 +772,10 @@ export default {
         return;
       }
 
-      let visibleUnReadMessages = [];
       // 获取容器的可视区域边界
-      const containerRect = container.getBoundingClientRect();
-      const containerTop = containerRect.top;
-      const containerBottom = containerTop + container.clientHeight;
+      this.chatContainerRect = container.getBoundingClientRect();
+      this.chatContainerTop = this.chatContainerRect.top;
+      this.chatContainerBottom = this.chatContainerTop + container.clientHeight;
 
       // 检查每条消息是否在可视区域内
       Array.from(messages).forEach((mes) => {
@@ -687,27 +784,35 @@ export default {
         const msgBottom = msgRect.bottom;
 
         // 判断消息是否至少有一部分在可视区域内
-        if (msgBottom > containerTop && msgTop < containerBottom) {
+        if (msgBottom > this.chatContainerTop && msgTop < this.chatContainerBottom) {
           const message = JSON.parse(mes.getAttribute('message'));
 
           // 如果消息是当前用户发送的且未读
           if (message.receiverId == this.currentUser.id && message.isRead == false) {
-            visibleUnReadMessages.push(message.chatMessageId);
+            this.visibleUnReadMessages.add(message.chatMessageId);
           }
         }
       });
 
       // 发送给服务端标记已读
-      if (visibleUnReadMessages.length > 0) {
-        this.socket.send(JSON.stringify({
-          senderId: this.currentUser.id,
-          receiverId: this.currentFriend.userId,
-          message: JSON.stringify(visibleUnReadMessages),
-          messageType: 'chat',
-          subType:'mes_read'
-        }))
+      if (this.visibleUnReadMessages.size > 0) {
+        this.sendUnReadMes();
       }
-    }
+    },
+
+    // 发送未读消息
+    sendUnReadMes(){
+      this.socket.send(JSON.stringify({
+        senderId: this.currentUser.id,
+        receiverId: this.currentFriend.userId,
+        message: JSON.stringify(Array.from(this.visibleUnReadMessages)),
+        messageType: 'chat',
+        subType:'mes_read'
+      }))
+
+      // 清空集合
+      this.visibleUnReadMessages.clear();
+    },
   }
 }
 </script>
