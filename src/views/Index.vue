@@ -18,7 +18,7 @@
       </div>
       <div class="menu-item" :class="{ active: activeMenu === 'friend' }" @click="goToFriend">
         <img src="@/static/icons/friend.png" alt="好友" @click="goToFriend" />
-        <span v-if="unreadCount.friend > 0" class="menu-badge">{{ unreadCount.friend }}</span>
+        <span v-if="unreadCount.friend == null" class="menu-badge">{{ unreadCount.friend }}</span>
       </div>
       <div class="menu-item">
         <i class="icon-discover">🌍</i>

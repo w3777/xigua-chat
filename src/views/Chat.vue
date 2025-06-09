@@ -15,9 +15,14 @@
             :class="{ active: currentFriend && currentFriend.userId === friend.userId }"
             @click="lockFriendWindow(friend.userId)"
         >
-          <div class="avatar">
-            <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.username">
-            <span v-else>{{ friend.username.charAt(0) }}</span>
+          <div class="friend-avatar-container">
+            <div class="avatar">
+              <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.username">
+              <span v-else>{{ friend.username.charAt(0) }}</span>
+            </div>
+            <div v-if="friend.friendUnreadCount > 0" class="friend-unread-badge">
+              {{ friend.friendUnreadCount > 99 ? '99+' : friend.friendUnreadCount }}
+            </div>
           </div>
           <div class="info">
             <div class="name">{{ friend.username }}</div>
@@ -28,9 +33,6 @@
             <span class="status-label">{{ friend.isOnline ? '在线' : '离线' }}</span>
           </div>
           <div class="time">{{ friend.time }}</div>
-          <div v-if="friend.unread > 0" class="unread-badge">
-            {{ friend.unread }}
-          </div>
         </div>
 
         <!--      <div v-if="loading" class="loading-more">-->
@@ -279,7 +281,7 @@ export default {
           lastMessage: friend.lastMessage,
           isOnline: friend.isOnline,
           time: friend.lastMessageTime,
-          unread: friend.unreadCount
+          friendUnreadCount: friend.friendUnreadCount
         }));
       })
     },
@@ -296,7 +298,7 @@ export default {
         this.currentFriend = this.friends.find(friend => friend.userId === friendId);
         setObject('currentFriend', this.currentFriend);
         // 告诉服务端当前打开的好友聊天框 (实时消息已读需要用到)
-        this.notifyFriendOpenChatWindow();
+        this.notifySwitchFriend();
       }
 
       // 清空历史消息所需参数
@@ -310,7 +312,7 @@ export default {
     },
 
     // 告诉服务端当前打开的好友聊天框
-    notifyFriendOpenChatWindow(){
+    notifySwitchFriend(){
       const message = {
         senderId: this.currentUser.id,
         receiverId: this.currentFriend.userId,
@@ -796,6 +798,8 @@ export default {
 
       // 发送给服务端标记已读
       if (this.visibleUnReadMessages.size > 0) {
+        // 好友未读消息清零
+        this.currentFriend.friendUnreadCount = 0;
         this.sendUnReadMes();
       }
     },
@@ -878,6 +882,10 @@ export default {
 
 .friend.active {
   background: #d9d9d9;
+}
+
+.friend-avatar-container{
+  position: relative;
 }
 
 .avatar {
@@ -1337,5 +1345,39 @@ export default {
   height: 100%;
   object-fit: cover; /* 保持图片比例填充 */
 }
+
+.friend-unread-badge {
+  position: absolute;
+  top: -6px;
+  right: -1px;
+  background-color: #f56c6c;
+  color: white;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0 5px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.friend-unread-badge[data-count="99+"] {
+  padding: 0 4px;
+  min-width: 24px;
+}
+
+/* 好友未读呼吸动画 */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 
 </style>
