@@ -27,7 +27,8 @@
 </template>
 
 <script>
-import {getUserInfo, login} from "@/api/user.js";
+import {getUserInfo,} from "@/api/user.js";
+import {login} from "@/api/auth.js";
 import {setToken} from "@/utils/auth.js";
 import {setObject} from "@/utils/localStorage.js";
 

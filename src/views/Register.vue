@@ -52,7 +52,7 @@
 </template>
 
 <script>
-import {register} from "@/api/user.js";
+import {register} from "@/api/auth.js";
 import {sendEmail} from "@/api/email.js";
 
 export default {

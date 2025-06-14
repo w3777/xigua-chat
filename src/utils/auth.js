@@ -1,6 +1,6 @@
 import Cookies from 'js-cookie'
 
-const TokenKey = 'Admin-Token'
+const TokenKey = 'Xigua-Token'
 
 const ExpiresInKey = 'Admin-Expires-In'
 
