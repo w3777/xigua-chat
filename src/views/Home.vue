@@ -11,7 +11,7 @@
           </div>
         </div>
         <div class="user-info">
-          <h2>{{ greetingText }}，{{this.currentUser.username}}</h2>
+          <h2>{{ greetingText }}，{{ this.currentUser?.username }}</h2>
           <p class="meta-info">
             {{ fullDateInfo }} |
             {{ location }} |

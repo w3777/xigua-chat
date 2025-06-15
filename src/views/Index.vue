@@ -138,7 +138,7 @@ export default {
       removeToken();
       this.closeWebSocket();
       clear();
-      router.push('/login');
+      window.location.href = `${import.meta.env.VITE_SSO_AUTH_URL}`;
     },
 
     initWebSocket() {

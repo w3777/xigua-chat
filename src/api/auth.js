@@ -17,3 +17,11 @@ export function register(data) {
         data: data
     })
 }
+
+// ticket兑换token
+export function redeemToken(data) {
+    return request({
+        url: '/sso/auth/redeemToken?ticket=' + data,
+        method: 'get'
+    })
+}

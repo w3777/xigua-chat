@@ -1,11 +1,11 @@
 import Cookies from 'js-cookie'
 
-const TokenKey = 'Xigua-Token'
+const TokenKey = 'xigua-token'
 
 const ExpiresInKey = 'Admin-Expires-In'
 
-export function getToken() {
-    return Cookies.get(TokenKey)
+export function getToken(tokenKey) {
+    return Cookies.get(tokenKey)
 }
 
 export function setToken(token) {
