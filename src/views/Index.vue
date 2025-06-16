@@ -145,6 +145,20 @@ export default {
       // 防止重复连接
       if (this.webSocket) return;
       this.webSocket = connectWebSocket();
+
+      // WebSocket 心跳包 （每60秒发一次）
+      setInterval(() => {
+        const userInfo = getObject('userInfo');
+        const message = {
+          senderId: userInfo.id,
+          receiverId: '',
+          message: 'ping',
+          messageType: 'heart_beat',
+          subType: 'ping',
+          createTime : Date.now()
+        };
+        this.webSocket.send(JSON.stringify(message))
+      }, 60000);
     },
 
     // 关闭WebSocket连接
