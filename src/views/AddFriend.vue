@@ -1,81 +1,146 @@
 <template>
-  <!-- 添加好友弹框 -->
+  <!-- 弹框遮罩层 -->
   <div class="dialog-overlay" v-if="showDialog">
-    <div class="add-friend-dialog">
+    <div class="multi-card-dialog">
       <!-- 弹框标题栏 -->
       <div class="dialog-header">
-        <div class="dialog-title">添加好友</div>
+        <div class="dialog-tabs">
+          <div
+              class="tab-item"
+              :class="{active: activeTab === 'friend'}"
+              @click="switchTab('friend')"
+          >
+            添加好友
+          </div>
+          <div
+              class="tab-item"
+              :class="{active: activeTab === 'group'}"
+              @click="switchTab('group')"
+          >
+            创建群聊
+          </div>
+        </div>
         <div class="dialog-close" @click="closeDialog">×</div>
       </div>
 
-      <!-- 搜索区域 -->
-      <div class="search-section">
-        <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="请输入用户名/qq号"
-            @input="handleSearchInput"
-            @keyup.enter="searchFriends"
-            ref="searchInput"
-        >
-        <button @click="searchFriends" class="search-btn">搜索</button>
-      </div>
-
-      <!-- 搜索结果列表 -->
-      <div class="search-results" v-if="searchResults.length > 0">
-        <div class="result-item" v-for="user in searchResults" :key="user.id">
-          <div class="user-avatar">
-            <img v-if="user.avatar" :src="user.avatar" alt="头像">
-            <span v-else>{{ user.name.charAt(0) }}</span>
-          </div>
-          <div class="user-info">
-            <div class="name-line">
-              <span class="user-name">{{ user.name }}</span>
-              <span class="user-sex" v-if="user.sex">
-            <img v-if="user.sex === 1" src="@/static/icons/man.png" alt="男" class="sex-icon">
-            <img v-if="user.sex === 2" src="@/static/icons/woman.png" alt="女" class="sex-icon">
-          </span>
-              <span class="user-status" :class="{'online': user.isOnline, 'offline': !user.isOnline}">
-                <i class="status-icon"></i>
-                {{ user.isOnline ? '在线' : '离线' }}
-              </span>
-            </div>
-            <div class="user-id">微信号: xg_{{ user.id }}</div>
-          </div>
-          <button
-              class="add-btn"
-              @click="sendFriendRequest(user.id)"
-              :disabled="user.requestSent"
+      <!-- 添加好友卡片 -->
+      <div class="card-content" v-show="activeTab === 'friend'">
+        <!-- 搜索区域 -->
+        <div class="search-section">
+          <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="请输入用户名/qq号"
+              @input="handleSearchInput"
+              @keyup.enter="searchFriends"
+              ref="searchInput"
           >
-            {{ user.requestSent ? '已发送' : '添加' }}
-          </button>
+          <button @click="searchFriends" class="search-btn">搜索</button>
+        </div>
+
+        <!-- 搜索结果列表 -->
+        <div class="search-results" v-if="searchResults.length > 0">
+          <div class="result-item" v-for="user in searchResults" :key="user.id">
+            <div class="user-avatar">
+              <img v-if="user.avatar" :src="user.avatar" alt="头像">
+              <span v-else>{{ user.name.charAt(0) }}</span>
+            </div>
+            <div class="user-info">
+              <div class="name-line">
+                <span class="user-name">{{ user.name }}</span>
+                <span class="user-sex" v-if="user.sex">
+                  <img v-if="user.sex === 1" src="@/static/icons/man.png" alt="男" class="sex-icon">
+                  <img v-if="user.sex === 2" src="@/static/icons/woman.png" alt="女" class="sex-icon">
+                </span>
+                <span class="user-status" :class="{'online': user.isOnline, 'offline': !user.isOnline}">
+                  <i class="status-icon"></i>
+                  {{ user.isOnline ? '在线' : '离线' }}
+                </span>
+              </div>
+              <div class="user-id">微信号: xg_{{ user.id }}</div>
+            </div>
+            <button
+                class="add-btn"
+                @click="sendFriendRequest(user.id)"
+                :disabled="user.requestSent"
+            >
+              {{ user.requestSent ? '已发送' : '添加' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 无结果提示 -->
+        <div class="no-results" v-else-if="searchQuery && !isSearching">
+          没有找到相关用户
+        </div>
+
+        <!-- 搜索提示 -->
+        <div class="search-tips" v-else>
+          输入用户名/qq号搜索好友
         </div>
       </div>
 
-      <!-- 无结果提示 -->
-      <div class="no-results" v-else-if="searchQuery && !isSearching">
-        没有找到相关用户
-      </div>
+      <!-- 创建群聊卡片 -->
+      <div class="card-content" v-show="activeTab === 'group'">
+        <div class="group-creation-form">
+          <div class="member-selection">
+            <label>选择成员</label>
+            <div class="member-list">
+              <div
+                  class="member-item"
+                  v-for="friend in friends"
+                  :key="friend.userId"
+                  @click="toggleMemberSelection(friend.userId)"
+              >
+                <div class="member-avatar">
+                  <img v-if="friend.avatar" :src="friend.avatar" alt="头像">
+                  <span v-else>{{ friend.name.charAt(0) }}</span>
+                </div>
+                <div class="member-name">{{ friend.name }}</div>
+                <div class="member-checkbox" :class="{selected: selectedMembers.includes(friend.userId)}">
+                  <i class="check-icon"></i>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <!-- 搜索提示 -->
-      <div class="search-tips" v-else>
-        输入用户名/qq号搜索好友
+          <button
+              class="create-group-btn"
+              @click="createGroup"
+              :disabled="!canCreateGroup"
+          >
+            创建群聊
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import {getListByName} from "@/api/user.js";
-import {sendFriendRequest} from "@/api/friendRelation.js";
+import { getListByName } from "@/api/user.js";
+import { sendFriendRequest } from "@/api/friendRelation.js";
+import { getFriendList } from "@/api/friendRelation.js";
+import { createGroup } from "@/api/group.js";
+import { getObject} from "@/utils/localStorage.js";
 
 export default {
   data() {
     return {
       showDialog: true,
+      activeTab: 'friend', // 默认显示添加好友卡片
+      // 添加好友相关数据
       searchQuery: '',
       searchResults: [],
       isSearching: false,
+      // 创建群聊相关数据
+      friends: [],
+      selectedMembers: []
+    }
+  },
+  computed: {
+    canCreateGroup() {
+      return this.selectedMembers.length >= 2;
     }
   },
   methods: {
@@ -83,6 +148,17 @@ export default {
       this.showDialog = false;
       this.$emit('close');
     },
+
+    // 切换卡片
+    switchTab(tab) {
+      this.activeTab = tab;
+      if (tab === 'group' && this.friends.length === 0) {
+        // todo 切换到创建群组 可以单独在显示好友列表加个loading
+        this.loadFriendsForGroup();
+      }
+    },
+
+    // 添加好友相关方法
     handleSearchInput() {
       if (!this.searchQuery.trim()) {
         this.searchResults = [];
@@ -124,11 +200,55 @@ export default {
           this.$message.success('添加好友请求已发送');
         }
       })
+    },
+
+    // 创建群聊相关方法
+    async loadFriendsForGroup() {
+      try {
+        const response = await getFriendList();
+        this.friends = response.data.map(friend => ({
+          userId: friend.userId,
+          name: friend.username,
+          avatar: friend.avatar
+        }));
+      } catch (error) {
+        console.error('加载好友列表失败:', error);
+        this.$message.error('加载好友列表失败');
+      }
+    },
+
+    // 创建群聊 选中成员
+    toggleMemberSelection(memberId) {
+      const index = this.selectedMembers.indexOf(memberId);
+      if (index === -1) {
+        this.selectedMembers.push(memberId);
+      } else {
+        this.selectedMembers.splice(index, 1);
+      }
+    },
+
+    // 创建群组
+    async createGroup() {
+      if (!this.canCreateGroup) return;
+      const currentUserId = getObject('userInfo').id;
+
+      const groupData = {
+        memberIds: [currentUserId, ...this.selectedMembers]
+      };
+
+      const response = await createGroup(groupData);
+      if (response.code === 200) {
+        this.$message.success('群聊创建成功');
+        this.closeDialog();
+        this.$emit('group-created', response.data);
+      } else {
+        this.$message.error(response.msg || '创建群聊失败');
+      }
     }
   },
   mounted() {
     this.$nextTick(() => {
-      this.$refs.searchInput.focus();
+      this.$refs.searchInput?.focus();
     });
   }
 }
@@ -149,9 +269,9 @@ export default {
   z-index: 1000;
 }
 
-/* 添加好友弹框 */
-.add-friend-dialog {
-  width: 420px;
+/* 多卡片弹框 */
+.multi-card-dialog {
+  width: 460px;
   background: white;
   border-radius: 8px;
   overflow: hidden;
@@ -175,14 +295,46 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 0 20px;
   border-bottom: 1px solid #e6e6e6;
+  height: 56px;
 }
 
-.dialog-title {
-  font-size: 18px;
-  font-weight: 500;
+.dialog-tabs {
+  display: flex;
+  height: 100%;
+}
+
+.tab-item {
+  padding: 0 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.tab-item:hover {
   color: #333;
+}
+
+.tab-item.active {
+  color: #07C160;
+  font-weight: 500;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 3px;
+  background: #07C160;
+  border-radius: 3px 3px 0 0;
 }
 
 .dialog-close {
@@ -197,11 +349,18 @@ export default {
   color: #333;
 }
 
-/* 搜索区域 */
+/* 卡片内容区域 */
+.card-content {
+  padding: 20px;
+  min-height: 300px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* 添加好友卡片样式 */
 .search-section {
   display: flex;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
 }
 
 .search-section input {
@@ -234,16 +393,14 @@ export default {
   background: #06AD56;
 }
 
-/* 搜索结果列表 */
 .search-results {
-  max-height: 360px;
-  overflow-y: auto;
+  margin-top: 16px;
 }
 
 .result-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  padding: 12px 0;
   border-bottom: 1px solid #f5f5f5;
 }
 
@@ -263,6 +420,13 @@ export default {
   margin-right: 12px;
   font-size: 18px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-info {
@@ -288,7 +452,14 @@ export default {
 
 .user-sex {
   margin-right: 8px;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sex-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
 }
 
 .user-status {
@@ -348,7 +519,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* 无结果提示和搜索提示 */
 .no-results,
 .search-tips {
   padding: 40px 20px;
@@ -358,10 +528,84 @@ export default {
   line-height: 1.5;
 }
 
-/* 头像样式 */
-.user-avatar {
-  width: 42px;
-  height: 42px;
+/* 创建群聊卡片样式 */
+.group-creation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-item label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-item input,
+.form-item select,
+.form-item textarea {
+  padding: 10px 12px;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  outline: none;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-item input:focus,
+.form-item select:focus,
+.form-item textarea:focus {
+  border-color: #07C160;
+}
+
+.form-item textarea {
+  resize: vertical;
+}
+
+.member-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.member-selection label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.member-item:hover {
+  background-color: #f5f5f5;
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 4px;
   background: #07C160;
   color: white;
@@ -369,33 +613,70 @@ export default {
   align-items: center;
   justify-content: center;
   margin-right: 12px;
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
-  overflow: hidden; /* 确保图片不会超出容器 */
+  overflow: hidden;
 }
 
-.user-avatar img {
+.member-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* 保持图片比例并填满容器 */
+  object-fit: cover;
 }
 
-/* 性别图标样式 */
-.user-gender {
-  margin-right: 8px;
+.member-name {
+  flex: 1;
   font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 性别图标样式 */
-.user-sex {
-  margin-right: 8px;
-  display: inline-flex;
+.member-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
-.sex-icon {
-  width: 14px;
-  height: 14px;
-  margin-right: 2px;
+.member-checkbox.selected {
+  background: #07C160;
+  border-color: #07C160;
+}
+
+.member-checkbox .check-icon {
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg);
+  margin-top: -2px;
+}
+
+.create-group-btn {
+  margin-top: 16px;
+  padding: 10px 0;
+  background: #07C160;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.create-group-btn:hover {
+  background: #06AD56;
+}
+
+.create-group-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
 }
 </style>

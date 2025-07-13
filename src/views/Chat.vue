@@ -266,6 +266,11 @@ export default {
       this.showAddFriend = true;
     },
 
+    // 关闭添加好友界面
+    closeAddFriend(){
+      this.showAddFriend = false;
+    },
+
     // 分页获取左侧好友列表
     getFriendLastMes(topUserId) {
       const data = {
