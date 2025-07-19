@@ -1,6 +1,6 @@
 <template>
   <!-- 弹框遮罩层 -->
-  <div class="dialog-overlay" v-if="showDialog">
+  <div class="dialog-overlay">
     <div class="multi-card-dialog">
       <!-- 弹框标题栏 -->
       <div class="dialog-header">
@@ -49,8 +49,8 @@
               <div class="name-line">
                 <span class="user-name">{{ user.name }}</span>
                 <span class="user-sex" v-if="user.sex">
-                  <img v-if="user.sex === 1" src="@/static/icons/man.png" alt="男" class="sex-icon">
-                  <img v-if="user.sex === 2" src="@/static/icons/woman.png" alt="女" class="sex-icon">
+                  <img v-if="user.sex === 1" src="../static/icons/man.png" alt="男" class="sex-icon">
+                  <img v-if="user.sex === 2" src="../static/icons/woman.png" alt="女" class="sex-icon">
                 </span>
                 <span class="user-status" :class="{'online': user.isOnline, 'offline': !user.isOnline}">
                   <i class="status-icon"></i>
@@ -127,7 +127,6 @@ import { getObject} from "@/utils/localStorage.js";
 export default {
   data() {
     return {
-      showDialog: true,
       activeTab: 'friend', // 默认显示添加好友卡片
       // 添加好友相关数据
       searchQuery: '',
@@ -145,7 +144,6 @@ export default {
   },
   methods: {
     closeDialog() {
-      this.showDialog = false;
       this.$emit('close');
     },
 

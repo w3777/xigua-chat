@@ -50,8 +50,8 @@ import {removeToken} from "@/utils/auth.js";
 import { getUserInfo } from '@/api/user'
 import defaultAvatar from '@/static/images/user_default.png'
 import router from "@/router";
-import {closeWebSocket, connectWebSocket, getSocketInstance} from '@/utils/websocket';
 import {remove, get, set, getObject, clear} from '@/utils/localStorage';
+import {getWebSocketClient} from "@/ws/WebSocketClient.js";
 
 export default {
   name: 'WeChatApp',
@@ -144,7 +144,7 @@ export default {
     initWebSocket() {
       // 防止重复连接
       if (this.webSocket) return;
-      this.webSocket = connectWebSocket();
+      this.webSocket = getWebSocketClient().getInstance();
 
       // WebSocket 心跳包 （每60秒发一次）
       setInterval(() => {
@@ -163,7 +163,7 @@ export default {
 
     // 关闭WebSocket连接
     closeWebSocket() {
-      closeWebSocket()
+      getWebSocketClient().close();
     },
 
     handleWebSocketMessage(data) {
