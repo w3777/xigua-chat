@@ -58,7 +58,7 @@ import ChatWindow from "../components/ChatWindow.vue";
 import {getLastMes} from "@/api/chatMessage.js";
 import {getObject, remove, setObject} from '@/utils/localStorage.js'
 import "vue3-emoji-picker/css";
-import {getWebSocketClient} from "@/ws/WebSocketClient.js";
+import {getSocketInstance, getWebSocketClient} from "@/ws/WebSocketClient.js";
 
 export default {
   name: 'WeChatApp',
@@ -143,8 +143,14 @@ export default {
 
       // 切换了聊天窗口
       if(chatId != this.currentChatWindow.chatId){
-        // 更新当前聊天窗口缓存
         this.currentChatWindow = this.messages.find(chat => chat.chatId === chatId);
+
+        // 切换聊天窗口，清空未读消息数量  (todo 后续这块需要优化)
+        if(this.currentChatWindow.unreadCount && this.currentChatWindow.unreadCount > 0){
+          this.currentChatWindow.unreadCount = 0;
+        }
+
+        // 更新当前聊天窗口缓存
         setObject('currentChatWindow', this.currentChatWindow);
 
         // 初始化聊天窗口
@@ -196,7 +202,8 @@ export default {
 
     // 初始化WebSocket连接
     initWebSocket() {
-      this.webSocket = getWebSocketClient().getInstance();
+      getWebSocketClient().connect();
+      this.webSocket = getSocketInstance();
       if(this.webSocket == null){
         return;
       }
@@ -213,11 +220,19 @@ export default {
     handleReceiveMessage(data) {
       const messageType = data.messageType;
       const subType = data.subType;
-      if(messageType == 'notify' && subType == 'friend_online'){ // 好友上线通知
+      if(messageType == 'chat' && subType == 'mes_receive'){ // 聊天消息
+        this.receiveChatMessage(data);
+      }else if(messageType == 'notify' && subType == 'friend_online'){ // 好友上线通知
         this.receiveFriendOnlineNotify(data);
       }else if(messageType == 'notify' && subType == 'friend_offline'){  // 好友下线通知
         this.receiveFriendOfflineNotify(data);
       }
+    },
+
+    // 接收聊天消息
+    receiveChatMessage(data){
+      // 刷新左侧好友消息列表
+      this.getLastMes()
     },
 
     // 接收好友上线通知

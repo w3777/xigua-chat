@@ -11,6 +11,7 @@ import { redeemToken } from '@/api/auth.js';
 import { setToken } from '@/utils/auth.js';
 import {getUserInfo,} from "@/api/user.js";
 import {setObject} from "@/utils/localStorage.js";
+import {getWebSocketClient} from "@/ws/WebSocketClient.js";
 
 const routes = [
     {
@@ -114,6 +115,9 @@ router.beforeEach(async (to, from, next) => {
                     this.$message.error('获取用户信息失败：' + userInfoRes.data.msg);
                 }
                 setObject('userInfo', userInfoRes.data)
+
+                // 连接websocket
+                getWebSocketClient().connect();
             })
 
             // 跳转到back

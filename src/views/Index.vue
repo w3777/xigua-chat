@@ -51,15 +51,25 @@ import { getUserInfo } from '@/api/user'
 import defaultAvatar from '@/static/images/user_default.png'
 import router from "@/router";
 import {remove, get, set, getObject, clear} from '@/utils/localStorage';
-import {getWebSocketClient} from "@/ws/WebSocketClient.js";
+import {getSocketInstance, getWebSocketClient} from "@/ws/WebSocketClient.js";
 
 export default {
   name: 'WeChatApp',
   mounted() {
+
+  },
+  created(){
     // 从localStorage中获取用户信息
     const userInfo = getObject('userInfo')
     this.userInfo = userInfo || {}
-    this.initWebSocket();
+
+    const activeMenu = get('activeMenu');
+    if (activeMenu) {
+      this.activeMenu = activeMenu;
+    } else {
+      // 默认值
+      this.activeMenu = 'home';
+    }
   },
   beforeDestroy() {
     this.closeWebSocket();
@@ -90,15 +100,6 @@ export default {
         moments: 0,
         profile: 0
       }
-    }
-  },
-  created() {
-    const activeMenu = get('activeMenu');
-    if (activeMenu) {
-      this.activeMenu = activeMenu;
-    } else {
-      // 默认值
-      this.activeMenu = 'home';
     }
   },
   methods: {
@@ -135,30 +136,11 @@ export default {
 
     // 退出登录
     logout() {
-      removeToken();
+      removeToken('xigua-token');
+      removeToken('sso-token');
       this.closeWebSocket();
       clear();
       window.location.href = `${import.meta.env.VITE_SSO_AUTH_URL}`;
-    },
-
-    initWebSocket() {
-      // 防止重复连接
-      if (this.webSocket) return;
-      this.webSocket = getWebSocketClient().getInstance();
-
-      // WebSocket 心跳包 （每60秒发一次）
-      setInterval(() => {
-        const userInfo = getObject('userInfo');
-        const message = {
-          senderId: userInfo.id,
-          receiverId: '',
-          message: 'ping',
-          messageType: 'heart_beat',
-          subType: 'ping',
-          createTime : Date.now()
-        };
-        this.webSocket.send(JSON.stringify(message))
-      }, 60000);
     },
 
     // 关闭WebSocket连接

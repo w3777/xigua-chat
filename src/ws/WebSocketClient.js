@@ -24,16 +24,33 @@ const messageListeners = new Set();
  */
 class WebSocketClient {
     constructor() {
-        // 保证只初始化一次
-        if (!socketInstance) {
-            this.initWebSocket();
-        }
+
     }
 
     /**
-     * 初始化 WebSocket 连接
+     * 创建websocket连接
      */
-    initWebSocket() {
+    connect() {
+        const userInfo = getObject('userInfo');
+        if (!userInfo || !userInfo.id) {
+            console.log('未登录，无法连接 WebSocket');
+            ElMessage.error({ message: '请先登录以接收新消息', plain: true });
+            return;
+        }
+        this.initWebSocket();
+
+        // websocket心跳包
+        this.sendHeartbeat()
+    }
+
+    /**
+     * 初始化 WebSocket
+     */
+     initWebSocket() {
+        if (socketInstance && socketInstance.readyState === WebSocket.OPEN) {
+            return ;
+        }
+
         const userInfo = getObject('userInfo');
         if (!userInfo || !userInfo.id) {
             console.log('未登录，无法连接 WebSocket');
@@ -122,10 +139,35 @@ class WebSocketClient {
         return socketInstance;
     }
 
+    /**
+     * 检查连接状态并尝试重新连接
+     */
     checkConnection(){
         if(socketInstance == null){
             this.reconnect();
         }
+    }
+
+    /**
+     * 发送心跳包
+     */
+    sendHeartbeat() {
+        // WebSocket 心跳包 （每60秒发一次）
+        setInterval(() => {
+            if (socketInstance && socketInstance.readyState === WebSocket.OPEN) {
+                const userInfo = getObject('userInfo');
+                const message = {
+                    senderId: userInfo.id,
+                    receiverId: '',
+                    message: 'ping',
+                    messageType: 'heart_beat',
+                    subType: 'ping',
+                    createTime : Date.now()
+                };
+                socketInstance.send(JSON.stringify(message))
+            }
+        }, 60000);
+
     }
 
     /**

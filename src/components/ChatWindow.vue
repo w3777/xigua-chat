@@ -126,7 +126,7 @@ import {getObject, setObject} from '@/utils/localStorage.js'
 import {ElMessage} from "element-plus";
 import EmojiPicker from "vue3-emoji-picker";
 import "vue3-emoji-picker/css";
-import {getWebSocketClient} from "@/ws/WebSocketClient.js";
+import {getSocketInstance, getWebSocketClient} from "@/ws/WebSocketClient.js";
 
 export default {
   components: {
@@ -170,13 +170,15 @@ export default {
     // 初始化WebSocket连接
     this.initWebSocket();
 
-    // 初始化聊天窗口
-    await this.initChatWindow();
-
+    this.currentChatWindow = getObject('currentChatWindow') || {};
+    this.currentUser = getObject('userInfo') || {};
     if(this.currentChatWindow.chatId != null){
       // 告诉服务端当前打开的好友聊天框
       this.notifySwitchChatWindow();
     }
+
+    // 初始化聊天窗口
+    await this.initChatWindow();
   },
   beforeDestroy() {
     // 组件销毁前关闭WebSocket
@@ -190,8 +192,12 @@ export default {
   },
   methods: {
     async initChatWindow(){
-      this.currentChatWindow = getObject('currentChatWindow') || {};
-      this.currentUser = getObject('userInfo') || {};
+      if(this.currentChatWindow != null){
+        this.currentChatWindow = getObject('currentChatWindow') || {};
+      }
+      if(this.currentUser != null){
+        this.currentUser = getObject('userInfo') || {};
+      }
 
       // 清空历史消息所需参数
       this.clearHistoryMes();
@@ -204,49 +210,6 @@ export default {
         // 获取当前窗口可视化的未读消息 提交到服务端批量已读
         this.getVisibleMessages();
       }
-    },
-    // 分页获取左侧好友列表
-    getLastMes() {
-      const data = {
-        pageNum: 1,
-        pageSize: 10
-      }
-      return getLastMes(data).then(res => {
-        this.messages = res.data.rows.map(friend => ({
-          userId: friend.userId,
-          username: friend.username,
-          avatar: friend.avatar,
-          lastMessage: friend.lastMessage,
-          isOnline: friend.isOnline,
-          time: friend.lastMessageTime,
-          friendUnreadCount: friend.friendUnreadCount
-        }));
-      })
-    },
-
-    // 锁定好友聊天窗口
-    async lockFriendWindow(friendId) {
-      if(friendId == null){
-        return
-      }
-      this.showChatWindow = true;
-
-      // 缓存当前好友信息
-      if(friendId != this.currentChatWindow.chatId){
-        this.currentChatWindow = this.messages.find(friend => friend.chatId === friendId);
-        setObject('currentChatWindow', this.currentChatWindow);
-        // 告诉服务端当前打开的好友聊天框 (实时消息已读需要用到)
-        this.notifySwitchChatWindow();
-      }
-
-      // 清空历史消息所需参数
-      this.clearHistoryMes();
-
-      // 加载历史消息
-      await this.loadHistoryMessages();
-
-      // 获取当前窗口可视化的未读消息 提交到服务端批量已读
-      this.getVisibleMessages()
     },
 
     // 告诉服务端当前打开的好友聊天框
@@ -289,7 +252,8 @@ export default {
 
     // 初始化WebSocket连接
     initWebSocket() {
-      this.webSocket = getWebSocketClient().getInstance();
+      getWebSocketClient().connect();
+      this.webSocket = getSocketInstance();
       if(this.webSocket == null){
         return;
       }
@@ -323,10 +287,10 @@ export default {
         this.currentChatWindowWindow(data)
       }
 
-      // 刷新左侧好友消息列表
-      if (this.$parent.getLastMes) {
-        this.$parent.getLastMes()
-      }
+      // // 刷新左侧好友消息列表
+      // if (this.$parent.getLastMes) {
+      //   this.$parent.getLastMes()
+      // }
     },
 
     // 接收消息发送确认
@@ -714,7 +678,7 @@ export default {
         receiverId: this.currentChatWindow.chatId,
         message: JSON.stringify(Array.from(this.visibleUnReadMessages)),
         messageType: 'chat',
-        subType:'mes_read'
+        subType:'submit_unread'
       }))
 
       // 清空集合
