@@ -28,11 +28,13 @@
             <div class="name">{{ message.chatName }}</div>
             <div class="last-msg">{{ message.lastMessageContent.content }}</div>
           </div>
-          <div class="friend-status" v-if="message.chatType === 1">
-            <span class="online-dot" :class="{ online: message.isOnline }"></span>
-            <span class="status-label">{{ message.isOnline ? '在线' : '离线' }}</span>
+          <div class="status-time">
+            <div class="time">{{ formatTime(message.updateTime) }}</div>
+            <div class="friend-status" v-if="message.chatType === 1">
+              <span class="online-dot" :class="{ online: message.isOnline }"></span>
+              <span class="status-label">{{ message.isOnline ? '在线' : '离线' }}</span>
+            </div>
           </div>
-          <div class="time">{{ formatTime(message.updateTime) }}</div>
         </div>
 
         <!--      <div v-if="loading" class="loading-more">-->
@@ -53,8 +55,8 @@
 </template>
 
 <script>
-import AddFriend from "../components/AddFriend.vue";
-import ChatWindow from "../components/ChatWindow.vue";
+import AddFriend from "./AddFriend.vue";
+import ChatWindow from "./ChatWindow.vue";
 import {getLastMes} from "@/api/chatMessage.js";
 import {getObject, remove, setObject} from '@/utils/localStorage.js'
 import "vue3-emoji-picker/css";
@@ -144,6 +146,9 @@ export default {
       // 切换了聊天窗口
       if(chatId != this.currentChatWindow.chatId){
         this.currentChatWindow = this.messages.find(chat => chat.chatId === chatId);
+        if(this.currentChatWindow == null){
+          return
+        }
 
         // 切换聊天窗口，清空未读消息数量  (todo 后续这块需要优化)
         if(this.currentChatWindow.unreadCount && this.currentChatWindow.unreadCount > 0){
@@ -520,6 +525,14 @@ export default {
   30% { transform: translateY(-3px); }
 }
 
+.status-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  justify-content: space-between;
+}
+
 .friend-status {
   display: flex;
   align-items: center;
@@ -532,7 +545,7 @@ export default {
   height: 8px;
   border-radius: 50%;
   background-color: #ccc;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
 .online-dot.online {

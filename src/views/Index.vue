@@ -11,13 +11,13 @@
         >
       </div>
       <div class="menu-item" :class="{ active: activeMenu === 'home' }" @click="goToHome">
-        <img src="@/static/icons/home.png" alt="首页"  />
+        <img src="@/static/icons/home.png" alt="首页" title="首页" />
       </div>
       <div class="menu-item" :class="{ active: activeMenu === 'chat' }" @click="goToChat">
-        <img src="@/static/icons/chat.png" alt="聊天" @click="goToChat" />
+        <img src="@/static/icons/chat.png" alt="聊天" title="聊天" @click="goToChat" />
       </div>
       <div class="menu-item" :class="{ active: activeMenu === 'friend' }" @click="goToFriend">
-        <img src="@/static/icons/friend.png" alt="好友" @click="goToFriend" />
+        <img src="@/static/icons/friend.png" alt="好友" title="好友" @click="goToFriend" />
         <span v-if="unreadCount.friend == null" class="menu-badge">{{ unreadCount.friend }}</span>
       </div>
       <div class="menu-item">

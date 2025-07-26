@@ -143,7 +143,7 @@ class WebSocketClient {
      * 检查连接状态并尝试重新连接
      */
     checkConnection(){
-        if(socketInstance == null){
+        if(socketInstance == null || socketInstance.readyState !== WebSocket.OPEN){
             this.reconnect();
         }
     }
