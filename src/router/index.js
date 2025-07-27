@@ -6,6 +6,7 @@ import Chat from '@/views/Chat.vue';
 import Profile from '@/views/Profile.vue';
 import Home from '@/views/Home.vue';
 import Friend from '@/views/Friend.vue';
+import Friend2 from '@/views/Friend2.vue';
 import { getCookie } from '@/utils/cookie.js';
 import { redeemToken } from '@/api/auth.js';
 import { setToken } from '@/utils/auth.js';
@@ -58,6 +59,11 @@ const routes = [
                 path: 'friend',
                 name: 'Friend',
                 component: Friend
+            },
+            {
+                path: 'friend2',
+                name: 'Friend2',
+                component: Friend2
             }
         ]
     }
