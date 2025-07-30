@@ -13,7 +13,7 @@
             <span class="arrow">{{ dropdowns.friends ? '▼' : '▶' }}</span>
           </div>
           <div class="dropdown-content" v-show="dropdowns.friends">
-            <div class="contact-item" v-for="friend in friends" :key="friend.userId" @contextmenu.prevent="showContextMenu($event, friend.userId)">
+            <div class="contact-item" v-for="friend in friends" :key="friend.userId" @contextmenu.prevent="showFriendClickMenu($event, friend.userId)">
               <div class="avatar-placeholder" v-if="!friend.avatar">
                 {{ friend.username && friend.username.charAt(0) }}
               </div>
@@ -31,7 +31,7 @@
             <span class="arrow">{{ dropdowns.groups ? '▼' : '▶' }}</span>
           </div>
           <div class="dropdown-content" v-show="dropdowns.groups">
-            <div class="contact-item" v-for="group in groups" :key="group.id">
+            <div class="contact-item" v-for="group in groups" :key="group.groupId" @contextmenu.prevent="showGroupClickMenu($event, group.groupId)">
               <div class="avatar-placeholder group" v-if="!group.groupAvatar">
                 {{ group.groupName && group.groupName.charAt(0) }}
               </div>
@@ -69,27 +69,51 @@
       </div>
     </div>
 
-    <!-- 右侧详情 -->
-    <div class="right-container">
-      <div class="right-content">
+    <!-- 右侧好友详情 -->
+    <div :class="{'right-container': showFriendDetail}">
+      <div :class="{'right-content': showFriendDetail}">
         <FriendDetail v-if="showFriendDetail" ref="friendDetail" @close="closeFriendDetail" />
       </div>
     </div>
 
-    <!-- 右键菜单 -->
-    <div class="context-menu"
-         v-show="contextMenu.visible"
-         :style="{ top: contextMenu.top + 'px', left: contextMenu.left + 'px' }"
-         @mouseleave="hideContextMenu">
-      <div class="menu-item" @click="handleMenuClick('chat')">
+    <!-- 右侧群组详情 -->
+    <div :class="{'right-container': showGroupDetail}">
+      <div :class="{'right-content': showGroupDetail}">
+        <GroupDetail v-if="showGroupDetail" ref="groupDetail" @close="closeGroupDetail" />
+      </div>
+    </div>
+
+    <!-- 好友右键菜单 -->
+    <div class="right-click-menu"
+         v-show="friendRightClickMenu.visible"
+         :style="{ top: friendRightClickMenu.top + 'px', left: friendRightClickMenu.left + 'px' }"
+         @mouseleave="hideFriendRightClickMenu">
+      <div class="menu-item" @click="handleFriendRightClickMenu('chat')">
         <i class="icon-message"></i> 发消息
       </div>
-      <div class="menu-item" @click="handleMenuClick('detail')">
-        <i class="icon-profile"></i> 查看详情
+      <div class="menu-item" @click="handleFriendRightClickMenu('detail')">
+        <i class="icon-friend"></i> 查看详情
       </div>
       <div class="menu-divider"></div>
-      <div class="menu-item" @click="handleMenuClick('delete')">
+      <div class="menu-item" @click="handleFriendRightClickMenu('delete')">
         <i class="icon-delete"></i> 删除好友
+      </div>
+    </div>
+
+    <!-- 群组右键菜单 -->
+    <div class="right-click-menu"
+         v-show="groupRightClickMenu.visible"
+         :style="{ top: groupRightClickMenu.top + 'px', left: groupRightClickMenu.left + 'px' }"
+         @mouseleave="hideGroupRightClickMenu">
+      <div class="menu-item" @click="handleGroupRightClickMenu('chat')">
+        <i class="icon-message"></i> 发消息
+      </div>
+      <div class="menu-item" @click="handleGroupRightClickMenu('detail')">
+        <i class="icon-group"></i> 查看详情
+      </div>
+      <div class="menu-divider"></div>
+      <div class="menu-item" @click="handleGroupRightClickMenu('delete')">
+        <i class="icon-delete"></i> 删除群组
       </div>
     </div>
   </div>
@@ -98,6 +122,7 @@
 <script>
 import {getContactCount, getFriendList, getGroupList} from "@/api/contact.js";
 import FriendDetail from "@/views/FriendDetail.vue";
+import GroupDetail from "@/views/GroupDetail.vue";
 import {getFriendDetail} from "@/api/friendRelation.js";
 
 export default {
@@ -119,11 +144,18 @@ export default {
       ],
       unreadRequests: 0,
       showFriendDetail: false, // 好友详情
-      contextMenu: {
+      friendRightClickMenu: {
         visible: false,
         top: 0,
         left: 0,
         friendId:null
+      },
+      showGroupDetail: false, // 群组详情
+      groupRightClickMenu: {
+        visible: false,
+        top: 0,
+        left: 0,
+        groupId:null
       },
     }
   },
@@ -132,7 +164,8 @@ export default {
     this.getContactCount();
   },
   components: {
-    FriendDetail
+    FriendDetail,
+    GroupDetail
   },
   methods: {
     toggleDropdown(type) {
@@ -202,6 +235,9 @@ export default {
 
     // 打开好友详情
     openFriendDetail(friendId) {
+      if(this.showGroupDetail){
+        this.showGroupDetail = false;
+      }
       this.showFriendDetail = true;
 
       this.$nextTick(() => {
@@ -217,39 +253,92 @@ export default {
       this.showFriendDetail = false;
     },
 
-    showContextMenu(event, friendId) {
-      this.contextMenu = {
+    showFriendClickMenu(event, friendId) {
+      this.friendRightClickMenu = {
         visible: true,
         top: event.clientY,
         left: event.clientX,
         friendId: friendId
       }
       // 点击其他地方关闭菜单
-      document.addEventListener('click', this.hideContextMenu)
+      document.addEventListener('click', this.hideFriendRightClickMenu)
     },
 
-    hideContextMenu() {
-      this.contextMenu.visible = false
-      document.removeEventListener('click', this.hideContextMenu)
+    hideFriendRightClickMenu() {
+      this.friendRightClickMenu.visible = false
+      document.removeEventListener('click', this.hideFriendRightClickMenu)
     },
 
-    handleMenuClick(action) {
-      this.hideContextMenu()
-      if (!this.contextMenu.friendId) return
+    handleFriendRightClickMenu(action) {
+      this.hideFriendRightClickMenu()
+      if (!this.friendRightClickMenu.friendId) return
 
-      const friendId = this.contextMenu.friendId
+      const friendId = this.friendRightClickMenu.friendId
       switch(action) {
         case 'chat':
           this.startChat(friendId)
           break
         case 'detail':
-          this.showFriendDetailFlag = true
           this.openFriendDetail(friendId)
           break
         case 'delete':
           this.deleteFriend(friendId)
           break
       }
+    },
+
+    showGroupClickMenu(event, groupId) {
+      this.groupRightClickMenu = {
+        visible: true,
+        top: event.clientY,
+        left: event.clientX,
+        groupId: groupId
+      }
+      // 点击其他地方关闭菜单
+      document.addEventListener('click', this.hideGroupRightClickMenu)
+    },
+
+    hideGroupRightClickMenu() {
+      this.groupRightClickMenu.visible = false
+      document.removeEventListener('click', this.hideGroupRightClickMenu)
+    },
+
+    handleGroupRightClickMenu(action) {
+      this.hideGroupRightClickMenu()
+      if (!this.groupRightClickMenu.groupId) return
+
+      const groupId = this.groupRightClickMenu.groupId
+      switch(action) {
+        case 'chat':
+          this.startChat(groupId)
+          break
+        case 'detail':
+          this.openGroupDetail(groupId)
+          break
+        case 'delete':
+          this.deleteGroup(groupId)
+          break
+      }
+    },
+
+    // 打开群组详情
+    openGroupDetail(groupId) {
+      if(this.showFriendDetail){
+        this.showFriendDetail = false;
+      }
+      this.showGroupDetail = true;
+
+      this.$nextTick(() => {
+        if (this.$refs.groupDetail) {
+          // 调用子组件方法
+          this.$refs.groupDetail.getGroupDetail(groupId);
+        }
+      });
+    },
+
+    // 关闭群组详情
+    closeGroupDetail() {
+      this.showGroupDetail = false;
     },
   }
 }
@@ -480,7 +569,7 @@ h1 {
   background-color: #e9e9e9;
 }
 
-.context-menu {
+.right-click-menu {
   position: fixed;
   z-index: 9999;
   background-color: #fff;
@@ -517,8 +606,12 @@ h1 {
   content: "💬";
 }
 
-.icon-profile:before {
+.icon-friend:before {
   content: "👤";
+}
+
+.icon-group:before {
+  content: "👥";
 }
 
 .icon-delete:before {

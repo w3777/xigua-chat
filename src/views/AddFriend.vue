@@ -120,7 +120,7 @@
 <script>
 import { getListByName } from "@/api/user.js";
 import { sendFriendRequest } from "@/api/friendRelation.js";
-import { getFriendList } from "@/api/friendRelation.js";
+import { getFriendList } from "@/api/contact.js";
 import { createGroup } from "@/api/group.js";
 import { getObject} from "@/utils/localStorage.js";
 
