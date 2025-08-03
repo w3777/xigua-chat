@@ -23,3 +23,19 @@ export function getGroupList() {
         method: 'get',
     })
 }
+
+// 获取发送好友申请列表
+export function getSendFriendRequestList() {
+    return request({
+        url: '/client/contact/getSendFriendRequestList',
+        method: 'get',
+    })
+}
+
+// 获取接收好友申请列表
+export function getReceiveFriendRequestList() {
+    return request({
+        url: '/client/contact/getReceiveFriendRequestList',
+        method: 'get',
+    })
+}

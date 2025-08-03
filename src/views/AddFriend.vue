@@ -190,7 +190,8 @@ export default {
     sendFriendRequest(userId) {
       const user = this.searchResults.find(u => u.id === userId);
       const reqData = {
-        friendId: userId
+        friendId: userId,
+        applyMsg: '申请添加你为好友'
       }
       sendFriendRequest(reqData).then(response => {
         if (response.code === 200) {

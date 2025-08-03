@@ -17,11 +17,8 @@
         <img src="@/static/icons/chat.png" alt="聊天" title="聊天" @click="goToChat" />
       </div>
       <div class="menu-item" :class="{ active: activeMenu === 'friend' }" @click="goToFriend">
-        <img src="@/static/icons/friend.png" alt="好友" title="好友" @click="goToFriend" />
+        <img src="@/static/icons/friend.png" alt="联系人" title="联系人" @click="goToFriend" />
         <span v-if="unreadCount.friend == null" class="menu-badge">{{ unreadCount.friend }}</span>
-      </div>
-      <div class="menu-item" :class="{ active: activeMenu === 'friend2' }" @click="goToFriend2">
-        <img src="@/static/icons/friend.png" alt="联系人" title="联系人" @click="goToFriend2" />
       </div>
       <div class="menu-item">
         <i class="icon-discover">🌍</i>
@@ -124,11 +121,6 @@ export default {
     // 跳转到好友
     goToFriend() {
       this.goToPage('friend')
-    },
-
-    // 跳转到好友
-    goToFriend2() {
-      this.goToPage('friend2')
     },
 
     goToPage(menu) {
