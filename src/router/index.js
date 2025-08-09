@@ -23,6 +23,7 @@ const routes = [
         path: '/register',
         name: 'Register',
         component: Register,
+        meta: { noAuth: true } // 标记为不需要认证
     },
     {
         path: '/',
