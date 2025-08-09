@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElNotification , ElMessageBox, ElMessage } from 'element-plus'
-import { getToken } from '@/utils/auth'
+import {getToken, removeToken} from '@/utils/auth'
 import errorCode from '@/utils/errorCode'
 import router from '@/router'
 
@@ -19,7 +19,7 @@ const service = axios.create({
 // request拦截器
 service.interceptors.request.use(config => {
     // 定义不需要token的白名单路径
-    const whiteList = ['/sso/auth/login', '/sso/auth/register', '/client/email/send']; // 根据实际路由调整
+    const whiteList = ['/client/auth/login', '/client/auth/register', '/client/email/send']; // 根据实际路由调整
     let token = '';
 
     // 检查当前请求是否在白名单中
@@ -27,19 +27,19 @@ service.interceptors.request.use(config => {
 
     // 如果需要token（不在白名单中）
     if (!isWhiteList) {
-        if(config.url.includes('redeemToken')){
-            token = getToken('sso-token');
-            // 添加token到请求头
-            config.headers['sso-token'] = token;
-        }else{
-            token = getToken('xigua-token');
-            // 添加token到请求头
-            config.headers['xigua-token'] = token;
+        const token = getToken();
+        if (!token) {
+            // 如果未登录且不是白名单路由，跳转到登录页
+            router.push('/login')
+            return Promise.reject(new Error('请先登录'));
         }
+
+        // 添加token到请求头
+        config.headers['xigua-token'] = token;
 
         if (!token) {
             // 如果未登录且不是白名单路由，跳转到登录页
-            window.location.href = `${import.meta.env.VITE_SSO_AUTH_URL}`;
+            router.push('/login');
             return Promise.reject(new Error('请先登录'));
         }
     }
@@ -70,7 +70,7 @@ service.interceptors.response.use(res => {
         }
         if (code === 401) {
             removeToken()
-            window.location.href = `${import.meta.env.VITE_SSO_AUTH_URL}`;
+            router.push('/login')
             return Promise.reject('登录已过期，请重新登录')
         } else if (code === 500) {
             ElMessage({ message: msg, type: 'error' })

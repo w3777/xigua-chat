@@ -100,13 +100,14 @@ export default {
     this.currentUser = getObject('userInfo');
     // 通过其他页面直接跟好友聊天，聊天窗口设置为该好友
     this.currentChatWindow = getObject('currentChatWindow') || {};
-    const currentFriendId = this.$route.query.friendId || this.currentChatWindow.chatId;
-    await this.getLastMes().then(() => {
-      // 如果有好友ID，则锁定聊天窗口
-      if(currentFriendId != null){
-        this.openChatWindow(currentFriendId)
-      }
-    })
+    const chatId = this.currentChatWindow.chatId;
+    const friendId = this.$route.query.friendId;
+
+    if(friendId != null && friendId != ''){
+      await this.initChat2(friendId)
+    }else{
+      await this.initChat(chatId)
+    }
   },
   beforeDestroy() {
     // 组件销毁前关闭WebSocket
@@ -134,6 +135,24 @@ export default {
       return getLastMes(data).then(res => {
         this.messages = res.data.rows;
       })
+    },
+
+    // 加载聊天
+    async initChat(chatId){
+      await this.getLastMes().then(() => {
+        // 如果有好友ID，则锁定聊天窗口
+        if(chatId != null){
+          this.openChatWindow(chatId)
+        }
+      })
+    },
+
+    // 加载聊天
+    async initChat2(friend){
+      console.log(friend)
+      // 消息列表如果有该好友，直接从消息列表打开，并打开聊天窗口
+
+      // 消息列表没有该好友，要在消息列表创建一条空消息，再打开聊天窗口
     },
 
     // 打开聊天窗口

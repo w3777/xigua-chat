@@ -140,7 +140,7 @@ export default {
       removeToken('sso-token');
       this.closeWebSocket();
       clear();
-      window.location.href = `${import.meta.env.VITE_SSO_AUTH_URL}`;
+      router.push('/login');
     },
 
     // 关闭WebSocket连接

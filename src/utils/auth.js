@@ -4,8 +4,8 @@ const TokenKey = 'xigua-token'
 
 const ExpiresInKey = 'Admin-Expires-In'
 
-export function getToken(tokenKey) {
-    return Cookies.get(tokenKey)
+export function getToken() {
+    return Cookies.get(TokenKey)
 }
 
 export function setToken(token) {

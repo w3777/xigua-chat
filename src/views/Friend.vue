@@ -179,6 +179,7 @@ import { friendVerify } from '@/api/friendRelation.js'
 import FriendDetail from "@/views/FriendDetail.vue";
 import GroupDetail from "@/views/GroupDetail.vue";
 import {getFriendDetail} from "@/api/friendRelation.js";
+import {set} from "@/utils/localStorage.js";
 
 export default {
   data() {
@@ -273,6 +274,16 @@ export default {
       if(this.dropdowns.groups == true){
         this.getGroupList();
       }
+    },
+
+    startChat(friendId) {
+      set('activeMenu', 'chat');
+      this.$router.push({
+        path: 'Chat',
+        query: {
+          "friendId": friendId
+        }
+      })
     },
 
     // 打开好友详情
