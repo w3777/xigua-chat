@@ -24,15 +24,15 @@
     <!-- 数据概览卡片 -->
     <div class="stats-card">
       <div class="stat-item">
-        <div class="stat-value">28</div>
+        <div class="stat-value">{{ homeCount.friendCount }}</div>
         <div class="stat-label">好友</div>
       </div>
       <div class="stat-item">
-        <div class="stat-value">156</div>
-        <div class="stat-label">消息</div>
+        <div class="stat-value">{{ homeCount.unreadCount }}</div>
+        <div class="stat-label">未读消息</div>
       </div>
       <div class="stat-item">
-        <div class="stat-value">12</div>
+        <div class="stat-value">{{ homeCount.groupCount }}</div>
         <div class="stat-label">群聊</div>
       </div>
     </div>
@@ -67,15 +67,15 @@
         <div class="log-item">
           <div class="log-badge">新</div>
           <div class="log-content">
-            <p>新增深色模式支持</p>
-            <span>今天 10:30</span>
+            <p>体验环境更新</p>
+            <span>2025/06/01</span>
           </div>
         </div>
         <div class="log-item">
           <div class="log-badge">优</div>
           <div class="log-content">
-            <p>优化消息同步速度</p>
-            <span>昨天 15:45</span>
+            <p>联系人页面优化</p>
+            <span>2025/08/03</span>
           </div>
         </div>
       </div>
@@ -86,6 +86,7 @@
 <script>
 import { getLocation, getWeather } from "@/api/thirdParty.js";
 import {getObject} from "@/utils/localStorage.js";
+import {getHomeCount} from "@/api/home.js";
 export default {
   name: 'Home',
   data() {
@@ -98,11 +99,17 @@ export default {
         emoji: '',
         temp: ''
       },
-      currentUser: {}
+      currentUser: {},
+      homeCount: {
+        friendCount: 0,
+        unreadCount: 0,
+        groupCount: 0
+      }
     }
   },
   created() {
     this.currentUser = getObject('userInfo');
+    this.getHomeCount()
   },
   computed: {
     greetingText() {
@@ -170,6 +177,14 @@ export default {
         // 可以继续添加更多映射
       }
       return map[weather] || '🌤️'
+    },
+
+    // 获取首页统计信息
+    async getHomeCount() {
+      const res = await getHomeCount()
+      if(res.code == 200){
+        this.homeCount = res.data
+      }
     },
   },
   mounted() {

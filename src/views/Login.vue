@@ -68,7 +68,6 @@ export default {
           this.$message.error('登录失败：' + loginRes.data.msg);
         }
         // 缓存token
-        console.log(loginRes.data.token)
         setToken(loginRes.data.token)
 
         // 调用当前用户接口 缓存当前用户信息
