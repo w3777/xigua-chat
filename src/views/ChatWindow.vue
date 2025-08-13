@@ -19,7 +19,7 @@
       <!-- 历史消息 -->
       <div
           v-for="message in chatMessages"
-          :key="message.chatMessageId"
+          :key="`${message.senderId}_${message.createTime}`"
           class="message"
           :message="JSON.stringify(message)"
           :class="{
@@ -50,9 +50,22 @@
             {{ message.message }}
           </div>
           <div class="message-bottom">
-              <span v-if="message.senderId === currentUser.id" class="read-status">
-                {{ message.isRead ? '已读' : '未读' }}
-              </span>
+            <!-- 发送中状态 -->
+            <span class="send-status" v-if="message.sendStatus === 'sending'">
+              <span class="loading-spinner"></span>
+              <span class="sending-text">发送中...</span>
+            </span>
+
+            <!-- 发送失败 -->
+            <span class="send-status" v-if="message.sendStatus === 'failed'">
+              <span class="failed-icon" @click="resendMessage(message)">❗</span>
+              <span class="failed-text">发送失败，点击重试</span>
+            </span>
+
+            <!-- 发送成功（已读/未读） -->
+            <span v-if="message.senderId === currentUser.id && message.sendStatus === 'success'" class="read-status">
+              {{ message.isRead ? '已读' : '未读' }}
+            </span>
           </div>
         </div>
 
@@ -303,6 +316,7 @@ export default {
       const msg = this.chatMessages.find(m => m.message === key && m.createTime == data.createTime);
       if (msg) {
         msg.chatMessageId = value;
+        msg.sendStatus = 'success';
       }
     },
 
@@ -519,6 +533,7 @@ export default {
         messageType: 'chat',
         subType: 'mes_send',
         isRead: false,
+        sendStatus: 'sending',
         createTime : this.formatDate(Date.now())
       };
 
@@ -529,13 +544,33 @@ export default {
       // 发送消息
       this.webSocket.send(JSON.stringify(message));
 
-      // 发送消息后，如果1秒后没用接收到服务端回传的消息id，提示消息发送失败
+      // 接收服务端ack的定时器
+      this.receiveAckTimer(message);
+    },
+
+    // 重新发送消息
+    resendMessage(message){
+      message.sendStatus = 'sending'
+
+      // 发送消息
+      this.webSocket.send(JSON.stringify(message));
+
+      // 接收服务端ack的定时器
+      this.receiveAckTimer(message);
+    },
+
+    // 接收服务端ack的定时器
+    receiveAckTimer(message){
+      // 发送消息后，如果1.5秒后没接收到服务端回传的消息id，提示消息发送失败
+      // 因为没有接收到服务端的ack，所以服务端没有将这条消息持久化，虽然页面可以重新发送，那是浏览器内存，随着浏览器刷新，消息就丢失了
+      // 微信将消息存到本地，关闭微信或再次打开微信仍然有发送失败的消息，服务端可能也没接收到消息，目标人也是看不到消息的
       setTimeout(() => {
         message = this.chatMessages.find(m => m.message === message.message && m.createTime == message.createTime)
         if(message.chatMessageId == null || message.chatMessageId == ''){
+          message.sendStatus = 'failed';
           ElMessage({ message: '消息发送失败', type: 'error', plain: true})
         }
-      }, 1000)
+      }, 1500)
     },
 
     // 格式化时间戳
@@ -1077,5 +1112,73 @@ export default {
   100% { transform: scale(1); }
 }
 
+/* 发送状态 */
+.send-status {
+  display: inline-flex;
+  align-items: center;
+  color: #666;
+  font-size: 12px;
+}
+
+/* 发送失败样式 */
+.failed-icon {
+  margin-right: 4px;
+  animation: pulse 1.5s infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.failed-icon span {
+  color: #f56c6c;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.failed-icon:hover {
+  background: #FEE0E0;
+  transform: scale(1.15);
+  box-shadow: 0 2px 10px rgba(211, 47, 47, 0.2);
+}
+
+.failed-icon:active {
+  transform: scale(0.9);
+}
+
+.failed-text {
+  color: #999;
+}
+
+/* 发送中样式 */
+@keyframes pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #07C160;
+  animation: spin 1s linear infinite;
+  margin-right: 6px;
+}
+
+.sending-text {
+  color: #999;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 </style>
