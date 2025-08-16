@@ -60,26 +60,106 @@
       </div>
     </div>
 
-    <!-- 更新日志 -->
-    <div class="update-log">
-      <h3 class="section-title">更新日志</h3>
-      <div class="log-list">
-        <div class="log-item">
-          <div class="log-badge">新</div>
-          <div class="log-content">
-            <p>体验环境更新</p>
-            <span>2025/06/01</span>
+    <div class="dashboard-section">
+      <!-- 左侧：更新日志 (50%) -->
+      <div class="update-log-panel">
+        <div class="panel-header">
+          <h3 class="panel-title">更新日志</h3>
+          <div class="filter-tabs">
+            <span class="tab active">全部</span>
+            <span class="tab">新功能</span>
+            <span class="tab">优化</span>
+            <span class="tab">修复</span>
           </div>
         </div>
-        <div class="log-item">
-          <div class="log-badge">优</div>
-          <div class="log-content">
-            <p>联系人页面优化</p>
-            <span>2025/08/03</span>
+
+        <div class="scrollable-content">
+          <!-- 体验环境上线卡片 -->
+          <div class="update-card featured">
+            <div class="card-header">
+              <span class="version">体验版</span>
+              <span class="date">2025年6月1日</span>
+              <span class="tag milestone">里程碑</span>
+            </div>
+            <h4 class="card-title">体验环境上线</h4>
+            <p class="card-desc">全新体验环境开放测试，欢迎反馈使用体验</p>
+          </div>
+
+          <!-- 月份分组 -->
+          <div class="month-divider">2025年8月</div>
+
+          <!-- 常规更新卡片 -->
+          <div class="update-card">
+            <div class="card-header">
+              <span class="version">v1.0.0</span>
+              <span class="date">08月12日</span>
+              <span class="tag new">新功能</span>
+            </div>
+            <h4 class="card-title">消息失败重发功能上线</h4>
+            <p class="card-desc">现在当消息发送失败时，系统会显示重试按钮</p>
+          </div>
+
+          <div class="update-card">
+            <div class="card-header">
+              <span class="version">v1.0.0</span>
+              <span class="date">08月12日</span>
+              <span class="tag optimized">优化</span>
+            </div>
+            <h4 class="card-title">消息抖动问题修复</h4>
+            <p class="card-desc">优化了消息发送时的动画效果</p>
+          </div>
+
+          <div class="update-card">
+            <div class="card-header">
+              <span class="version">v1.0.0</span>
+              <span class="date">08月03日</span>
+              <span class="tag optimized">优化</span>
+            </div>
+            <h4 class="card-title">联系人页面改版</h4>
+            <p class="card-desc">重新设计了联系人列表界面</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：本周活跃 (50%) -->
+      <div class="activity-panel">
+        <div class="panel-header">
+          <h3 class="panel-title">本周活跃</h3>
+          <span class="time-range">08.12-08.16</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-content">
+              <div class="stat-value">128</div>
+              <div class="stat-label">消息发送</div>
+              <div class="trend up">↑12%</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+              <div class="stat-value">86%</div>
+              <div class="stat-label">新增好友</div>
+              <div class="trend up">↑5%</div>
+            </div>
+          </div>
+
+          <div class="stat-card highlight">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-content">
+              <div class="stat-value">12.3</div>
+              <div class="stat-label">日均使用(次)</div>
+              <div class="trend up">↑8%</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+
   </div>
 </template>
 
@@ -404,5 +484,277 @@ export default {
 .log-content span {
   font-size: 12px;
   color: #999;
+}
+
+/* 主容器 */
+.dashboard-section {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 左右面板通用样式 */
+.update-log-panel,
+.activity-panel {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* 面板头部 */
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.time-range {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 筛选标签 */
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  background: #07C160;
+  color: white;
+}
+
+/* 可滚动内容区域 */
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+}
+
+/* 更新卡片样式 */
+.update-card {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  transition: all 0.2s;
+}
+
+.update-card:hover {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+.update-card.featured {
+  background: #f0f7ff;
+  border-left: 3px solid #07C160;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.version {
+  font-size: 12px;
+  color: #07C160;
+  font-weight: 500;
+}
+
+.date {
+  font-size: 12px;
+  color: #999;
+}
+
+.tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.tag.milestone {
+  background: #4169E1;
+  color: white;
+}
+
+.tag.new {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07C160;
+}
+
+.tag.optimized {
+  background: rgba(255, 205, 0, 0.1);
+  color: #FFCD00;
+}
+
+.card-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.card-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* 月份分隔线 */
+.month-divider {
+  font-size: 13px;
+  color: #666;
+  margin: 12px 0 8px 0;
+  padding-left: 8px;
+  position: relative;
+}
+
+.month-divider:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1px;
+  width: 100%;
+  background: #f0f0f0;
+  z-index: 0;
+}
+
+/* 活跃数据统计 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+
+.stat-card {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.stat-card.highlight {
+  grid-column: span 2;
+  background: #f0f7ff;
+}
+
+.stat-icon {
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  background: rgba(7, 193, 96, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #07C160;
+}
+
+.stat-card.highlight .stat-icon {
+  background: rgba(7, 193, 96, 0.2);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.trend {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.trend.up {
+  color: #07C160;
+}
+
+.trend.down {
+  color: #FF4D4F;
+}
+
+/* 底部摘要 */
+.activity-summary {
+  display: flex;
+  border-top: 1px solid #f0f0f0;
+  margin-top: auto;
+}
+
+.summary-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #07C160;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* 滚动条样式 */
+.scrollable-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+  background-color: #e0e0e0;
+  border-radius: 3px;
 }
 </style>

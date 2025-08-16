@@ -30,7 +30,7 @@
 import {getUserInfo,} from "@/api/user.js";
 import {login} from "@/api/auth.js";
 import {setToken} from "@/utils/auth.js";
-import {setObject} from "@/utils/localStorage.js";
+import {set, setObject} from "@/utils/localStorage.js";
 
 export default {
   data() {
@@ -76,6 +76,7 @@ export default {
           this.$message.error('获取用户信息失败：' + userInfoRes.data.msg);
         }
         setObject('userInfo', userInfoRes.data)
+        set('activeMenu', 'home')
 
         // 跳转到首页
         this.$router.push('/home');

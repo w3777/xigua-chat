@@ -57,13 +57,13 @@
             </span>
 
             <!-- 发送失败 -->
-            <span class="send-status" v-if="message.sendStatus === 'failed'">
+            <span class="send-status" v-else-if="message.sendStatus === 'failed'">
               <span class="failed-icon" @click="resendMessage(message)">❗</span>
               <span class="failed-text">发送失败，点击重试</span>
             </span>
 
             <!-- 发送成功（已读/未读） -->
-            <span v-if="message.senderId === currentUser.id && message.sendStatus === 'success'" class="read-status">
+            <span v-else="message.senderId === currentUser.id && message.sendStatus === 'success'" class="read-status">
               {{ message.isRead ? '已读' : '未读' }}
             </span>
           </div>
