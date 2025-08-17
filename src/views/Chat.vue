@@ -25,7 +25,7 @@
             </div>
           </div>
           <div class="info">
-            <div class="name">{{ message.chatName }}</div>
+            <div class="name">{{ formatChatName(message.chatName) }}</div>
             <div class="last-msg">{{ message.lastMessageContent.content }}</div>
           </div>
           <div class="status-time">
@@ -33,6 +33,9 @@
             <div class="friend-status" v-if="message.chatType === 1">
               <span class="online-dot" :class="{ online: message.isOnline }"></span>
               <span class="status-label">{{ message.isOnline ? '在线' : '离线' }}</span>
+            </div>
+            <div v-if="message.chatType === 2" class="group-status">
+              <span class="group-tag">群聊</span>
             </div>
           </div>
         </div>
@@ -339,7 +342,21 @@ export default {
       const month = (date.getMonth() + 1).toString().padStart(2, '0')
       const day = date.getDate().toString().padStart(2, '0')
       return `${year}/${month}/${day}`
-    }
+    },
+
+    // 格式化聊天名称
+    formatChatName(chatName){
+      if(chatName == null || chatName == ''){
+        return '';
+      }
+
+      if(chatName.length > 8){
+        // 名称长度大于8 截取前8个字符
+        return chatName.substring(0, 8) + '...';
+      }
+
+      return chatName;
+    },
   }
 }
 </script>
@@ -626,5 +643,24 @@ export default {
   100% { transform: scale(1); }
 }
 
+.group-status {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+  margin-left: 12px;
+}
+
+/* 群聊标签样式 */
+.group-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: normal;
+  line-height: 1;
+  color: #7239EA;
+  background-color: rgba(114, 57, 234, 0.1);
+  border: 1px solid rgba(114, 57, 234, 0.3);
+}
 
 </style>

@@ -31,7 +31,8 @@
         <!-- 接收方头像 -->
         <div v-if="message.senderId !== currentUser.id" class="avatar-container">
           <div class="message-avatar">
-            <img v-if="currentChatWindow.avatar" :src="currentChatWindow.avatar" :alt="currentChatWindow.chatName">
+            <img v-if="message.chatType == 1 && currentChatWindow.avatar" :src="currentChatWindow.avatar" :alt="currentChatWindow.chatName">
+            <img v-else-if="message.chatType == 2" :src="message.sender.avatar" :alt="message.chatName">
             <span v-else>{{ currentChatWindow && currentChatWindow.chatName ? currentChatWindow.chatName[0] : '' }}</span>
           </div>
         </div>
@@ -44,12 +45,15 @@
                     'sender': message.senderId === currentUser.id,
                     'receiver': message.senderId !== currentUser.id
                   }">
+            <span class="message-sender-username" v-if="message.chatType == 2 && message.senderId !== currentUser.id">
+            {{ message.sender?.username || '未知用户' }}
+          </span>
             <span class="message-time">{{ message.createTime }}</span>
           </div>
           <div class="content">
             {{ message.message }}
           </div>
-          <div class="message-bottom">
+          <div class="message-bottom" v-if="message.senderId === currentUser.id">
             <!-- 发送中状态 -->
             <span class="send-status" v-if="message.sendStatus === 'sending'">
               <span class="loading-spinner"></span>
@@ -62,8 +66,9 @@
               <span class="failed-text">发送失败，点击重试</span>
             </span>
 
+            <!-- 群聊已读未读后续再写 -->
             <!-- 发送成功（已读/未读） -->
-            <span v-else="message.senderId === currentUser.id && message.sendStatus === 'success'" class="read-status">
+            <span v-else-if="message.chatType == 1 && message.senderId === currentUser.id && message.sendStatus === 'success'" class="read-status">
               {{ message.isRead ? '已读' : '未读' }}
             </span>
           </div>
@@ -294,10 +299,17 @@ export default {
 
     // 接收聊天消息
     receiveChatMessage(data){
+      if(this.currentChatWindow == null){
+        return;
+      }
+      const chatType = this.currentChatWindow.chatType;
+
       const senderId = data.senderId;
       // 判断是否在当前聊天窗口
-      if (this.currentChatWindow && this.currentChatWindow.chatId === senderId){
+      if (chatType == 1 && this.currentChatWindow.chatId === senderId){
         this.currentChatWindowWindow(data)
+      }else if(chatType == 2){
+        // todo 群聊消息显示到聊天窗口
       }
 
       // // 刷新左侧好友消息列表
@@ -359,6 +371,7 @@ export default {
       const req = {
         senderId: this.currentUser.id,
         receiverId: this.currentChatWindow.chatId,
+        chatType: this.currentChatWindow.chatType,
         pageNum: this.historyPageNum,
         pageSize: this.historyPageSize
       };
@@ -530,6 +543,7 @@ export default {
         senderId: senderId,
         receiverId: this.currentChatWindow.chatId,
         message: this.newMessage.trim(),
+        chatType: this.currentChatWindow.chatType,
         messageType: 'chat',
         subType: 'mes_send',
         isRead: false,
@@ -1057,6 +1071,7 @@ export default {
 .message-header {
   margin-bottom: 5px;
   align-items: center;
+  display: flex;
 }
 
 .message-header .sender {
@@ -1065,6 +1080,22 @@ export default {
 
 .message-header.receiver {
   text-align: left;
+}
+
+.message-sender-username {
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+/* 发送方消息的样式调整 */
+.message.sender-username .message-header {
+  justify-content: flex-end;
+}
+
+.message.sender-username .message-sender-username {
+  display: none;
 }
 
 .message-time {

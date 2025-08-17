@@ -41,19 +41,19 @@
     <div class="quick-actions">
       <h3 class="section-title">快捷入口</h3>
       <div class="action-grid">
-        <div class="action-item" @click="$router.push('/chat')">
+        <div class="action-item" @click="goTo('/chat', 'chat')">
           <div class="action-icon" style="color: #07C160;">💬</div>
           <div class="action-text">发起聊天</div>
         </div>
-        <div class="action-item" @click="showComingSoon">
+        <div class="action-item" @click="goTo('/friend', 'friend')">
           <div class="action-icon" style="color: #576B95;">👥</div>
-          <div class="action-text">创建群聊</div>
+          <div class="action-text">联系人</div>
         </div>
         <div class="action-item" @click="showComingSoon">
           <div class="action-icon" style="color: #FFCD00;">🌍</div>
           <div class="action-text">发现</div>
         </div>
-        <div class="action-item" @click="$router.push('/profile')">
+        <div class="action-item" @click="goTo('/profile', 'profile')">
           <div class="action-icon" style="color: #FF9500;">👤</div>
           <div class="action-text">我的资料</div>
         </div>
@@ -125,7 +125,7 @@
       <div class="activity-panel">
         <div class="panel-header">
           <h3 class="panel-title">本周活跃</h3>
-          <span class="time-range">08.12-08.16</span>
+          <span class="time-range">{{ getWeekRange() }}</span>
         </div>
 
         <div class="stats-grid">
@@ -165,7 +165,7 @@
 
 <script>
 import { getLocation, getWeather } from "@/api/thirdParty.js";
-import {getObject} from "@/utils/localStorage.js";
+import {getObject, set} from "@/utils/localStorage.js";
 import {getHomeCount} from "@/api/home.js";
 export default {
   name: 'Home',
@@ -266,6 +266,23 @@ export default {
         this.homeCount = res.data
       }
     },
+
+    // 跳转页面
+    goTo(path, activeMenu) {
+      if(path == null || activeMenu == null){
+        return
+      }
+      this.$router.push(path)
+      set('activeMenu', activeMenu)
+    },
+
+    // 获取本周范围
+    getWeekRange() {
+      const now = new Date()
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 1)
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7)
+      return `${start.getMonth() + 1}.${start.getDate()} - ${end.getMonth() + 1}.${end.getDate()}`
+    }
   },
   mounted() {
     this.timer = setInterval(() => {
