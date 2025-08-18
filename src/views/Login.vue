@@ -15,7 +15,7 @@
 
       <!-- 登录按钮 -->
       <el-form-item>
-        <el-button type="primary" native-type="submit" class="submit-btn">登录</el-button>
+        <el-button type="primary" native-type="submit" class="submit-btn" :loading="loading">{{ loading ? '登录中...' : '登录' }} </el-button>
       </el-form-item>
     </el-form>
 
@@ -39,6 +39,7 @@ export default {
         username: '',
         password: ''
       },
+      loading: false,
       rules: {
         username: [
           { required: true, message: '请输入用户名/邮箱', trigger: 'blur' }
@@ -62,13 +63,20 @@ export default {
           password: this.form.password
         };
 
-        // 调用登录接口
-        const loginRes = await login(requestData);
-        if (loginRes.code != 200) {
-          this.$message.error('登录失败：' + loginRes.data.msg);
+        this.loading = true;
+        try {
+          // 调用登录接口
+          const loginRes = await login(requestData);
+          if (loginRes.code != 200) {
+            this.$message.error('登录失败：' + loginRes.data.msg);
+          }
+          // 缓存token
+          setToken(loginRes.data.token)
+        } catch (error) {
+          this.$message.error('登录失败：' + error.message);
+        } finally {
+          this.loading = false;
         }
-        // 缓存token
-        setToken(loginRes.data.token)
 
         // 调用当前用户接口 缓存当前用户信息
         const userInfoRes = await getUserInfo()

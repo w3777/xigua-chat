@@ -302,15 +302,20 @@ export default {
       if(this.currentChatWindow == null){
         return;
       }
-      const chatType = this.currentChatWindow.chatType;
 
       const senderId = data.senderId;
       // 判断是否在当前聊天窗口
-      if (chatType == 1 && this.currentChatWindow.chatId === senderId){
-        this.currentChatWindowWindow(data)
-      }else if(chatType == 2){
-        // todo 群聊消息显示到聊天窗口
+      if(this.currentChatWindow.chatId !== senderId){
+        return;
       }
+
+      // 接收到消息push到当前窗口
+      this.currentChatWindowPushMessage(data)
+
+      // 滚动到底部
+      this.$nextTick(() => {
+        this.scrollToBottom();
+      });
 
       // // 刷新左侧好友消息列表
       // if (this.$parent.getLastMes) {
@@ -332,21 +337,49 @@ export default {
       }
     },
 
-    // 在当前聊天窗口
-    currentChatWindowWindow(data) {
+    // 接收到的消息推到当前窗口
+    currentChatWindowPushMessage(data) {
+      const chatType = this.currentChatWindow.chatType;
+      if(chatType == null){
+        return
+      }
+
+      // 在聊天窗口添加新消息
+      if(chatType === 1){
+        this.pushPrivateMessage(data);
+      }else if(chatType === 2){
+        this.pushGroupMessage(data);
+      }else{
+        return;
+      }
+    },
+
+    // 单聊push消息到聊天窗口
+    pushPrivateMessage(data){
       // 在聊天窗口添加新消息
       this.chatMessages.push({
         chatMessageId: data.chatMessageId,
-        sender: data.senderId,
+        senderId: data.senderId,
         receiverId: data.receiverId,
         messageType: data.messageType,
+        chatType: this.currentChatWindow.chatType,
         message: data.message,
         createTime: this.formatDate(data.createTime),
       });
+    },
 
-      // 滚动到底部
-      this.$nextTick(() => {
-        this.scrollToBottom();
+    // 单聊push消息到聊天窗口
+    pushGroupMessage(data){
+      this.chatMessages.push({
+        chatMessageId: data.chatMessageId,
+        senderId: data.senderId,
+        // 群聊真正发送人
+        sender: data.sender,
+        receiverId: data.receiverId,
+        messageType: data.messageType,
+        chatType: this.currentChatWindow.chatType,
+        message: data.message,
+        createTime: this.formatDate(data.createTime),
       });
     },
 
