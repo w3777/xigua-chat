@@ -49,8 +49,11 @@
       </div>
     </div>
 
-    <!-- 聊天窗口组件 -->
-    <ChatWindow v-if="showChatWindow" ref="chatWindow" @close="closeChatWindow" />
+    <div class="right-container">
+      <!-- 聊天窗口组件 -->
+      <ChatWindow v-if="showChatWindow" ref="chatWindow" @close="closeChatWindow" />
+      <WelcomeWelcome v-else />
+    </div>
 
     <!-- 添加好友组件 -->
     <AddFriend v-if="showAddFriend" @close="closeAddFriend" />
@@ -64,6 +67,7 @@ import {getLastMes} from "@/api/chatMessage.js";
 import {getObject, remove, setObject} from '@/utils/localStorage.js'
 import "vue3-emoji-picker/css";
 import {getSocketInstance, getWebSocketClient} from "@/ws/WebSocketClient.js";
+import WelcomeWelcome from "@/components/WelcomeWelcome.vue";
 
 export default {
   name: 'WeChatApp',
@@ -75,7 +79,8 @@ export default {
   },
   components: {
     AddFriend,
-    ChatWindow
+    ChatWindow,
+    WelcomeWelcome
   },
   data() {
     return {
@@ -365,10 +370,16 @@ export default {
 /* 左侧联系人列表样式 */
 .left-container {
   width: 30%;
+  height: 100%;
   background: #eee;
   border-right: 1px solid #ddd;
   display: flex;
   flex-direction: column;
+}
+
+.right-container {
+  width: 70%;
+  height: 100%;
 }
 .message-list {
   overflow-y: auto;

@@ -123,18 +123,23 @@
       </div>
     </div>
 
-    <!-- 右侧好友详情 -->
-    <div :class="{'right-container': showFriendDetail}">
-      <div :class="{'right-content': showFriendDetail}">
-        <FriendDetail v-if="showFriendDetail" ref="friendDetail" @close="closeFriendDetail" />
+    <div class="right-container">
+      <!-- 右侧好友详情 -->
+      <div :class="{'detail-container': showFriendDetail}">
+        <div :class="{'right-content': showFriendDetail}">
+          <FriendDetail v-if="showFriendDetail" ref="friendDetail" @close="closeFriendDetail" />
+        </div>
       </div>
-    </div>
 
-    <!-- 右侧群组详情 -->
-    <div :class="{'right-container': showGroupDetail}">
-      <div :class="{'right-content': showGroupDetail}">
-        <GroupDetail v-if="showGroupDetail" ref="groupDetail" @close="closeGroupDetail" />
+      <!-- 右侧群组详情 -->
+      <div :class="{'detail-container': showGroupDetail}">
+        <div :class="{'right-content': showGroupDetail}">
+          <GroupDetail v-if="showGroupDetail" ref="groupDetail" @close="closeGroupDetail" />
+        </div>
       </div>
+
+      <!-- 欢迎页 -->
+      <WelcomeWelcome v-if="showFriendDetail == false && showGroupDetail == false"></WelcomeWelcome>
     </div>
 
     <!-- 好友右键菜单 -->
@@ -180,6 +185,7 @@ import FriendDetail from "@/views/FriendDetail.vue";
 import GroupDetail from "@/views/GroupDetail.vue";
 import {getFriendDetail} from "@/api/friendRelation.js";
 import {set} from "@/utils/localStorage.js";
+import WelcomeWelcome from "@/components/WelcomeWelcome.vue";
 
 export default {
   data() {
@@ -221,7 +227,8 @@ export default {
   },
   components: {
     FriendDetail,
-    GroupDetail
+    GroupDetail,
+    WelcomeWelcome
   },
   methods: {
     // 打开/关闭 下拉列表
@@ -540,6 +547,11 @@ export default {
   flex-direction: column;
 }
 
+.right-container {
+  width: 70%;
+  height: 100%;
+}
+
 .left-content {
   padding: 16px;
   flex: 1;
@@ -551,7 +563,8 @@ export default {
   width: 0;
 }
 
-.right-container {
+.detail-container {
+  height: 100%;
   flex: 1;
   background-color: #ffffff;
   display: flex;

@@ -91,6 +91,7 @@
             @confirm="handleAvatarConfirm"
             @back="handleCloseEditor"
         />
+        <WelcomeWelcome v-else />
       </div>
     </div>
   </div>
@@ -100,10 +101,12 @@
 import {getUserInfo, updateUserInfo} from "@/api/user.js";
 import AvatarEditorView from "./AvatarEditor.vue";
 import router from "@/router";
+import WelcomeWelcome from "@/components/WelcomeWelcome.vue";
 
 export default {
   components: {
-    AvatarEditorView
+    AvatarEditorView,
+    WelcomeWelcome
   },
   data() {
     return {

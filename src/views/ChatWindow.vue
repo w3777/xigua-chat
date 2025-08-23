@@ -773,6 +773,7 @@ export default {
 <style scoped>
 /* 右侧聊天窗口样式 */
 .chat-window {
+  height: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
