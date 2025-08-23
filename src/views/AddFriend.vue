@@ -243,7 +243,13 @@ export default {
       } else {
         this.$message.error(response.msg || '创建群聊失败');
       }
-    }
+
+      // 延迟500毫秒 （缓存是异步，可能有一点延迟）
+      setTimeout(() => {
+        // 刷新消息列表，调用父组件getLastMes方法
+        this.$parent.getLastMes();
+      }, 500);
+    },
   },
   mounted() {
     this.$nextTick(() => {

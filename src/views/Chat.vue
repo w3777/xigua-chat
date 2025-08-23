@@ -20,9 +20,10 @@
               <img v-if="message.avatar" :src="message.avatar" :alt="message.chatName">
               <span v-else>{{ message.chatName.charAt(0) }}</span>
             </div>
-            <div v-if="message.unreadCount > 0" class="unread-badge">
+            <div v-if="message.chatType === 1 && message.unreadCount > 0" class="friend-unread-badge">
               {{ message.unreadCount > 99 ? '99+' : message.unreadCount }}
             </div>
+            <div v-if="message.chatType === 2 && message.unreadCount > 0" class="group-unread-badge"></div>
           </div>
           <div class="info">
             <div class="name">{{ formatChatName(message.chatName) }}</div>
@@ -621,7 +622,7 @@ export default {
   object-fit: cover; /* 保持图片比例填充 */
 }
 
-.unread-badge {
+.friend-unread-badge {
   position: absolute;
   top: -6px;
   right: -1px;
@@ -642,7 +643,7 @@ export default {
   animation: pulse 1.5s infinite ease-in-out;
 }
 
-.unread-badge[data-count="99+"] {
+.friend-unread-badge[data-count="99+"] {
   padding: 0 4px;
   min-width: 24px;
 }
@@ -652,6 +653,20 @@ export default {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+.group-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: 6px;
+  background-color: #f56c6c;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid white;
+  animation: pulse 1.5s infinite ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .group-status {
