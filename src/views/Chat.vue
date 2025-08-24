@@ -158,7 +158,6 @@ export default {
 
     // 加载聊天
     async initChat2(friend){
-      console.log(friend)
       // 消息列表如果有该好友，直接从消息列表打开，并打开聊天窗口
 
       // 消息列表没有该好友，要在消息列表创建一条空消息，再打开聊天窗口
@@ -264,8 +263,23 @@ export default {
 
     // 接收聊天消息
     receiveChatMessage(data){
-      // 刷新左侧好友消息列表
-      this.getLastMes()
+      if(data == null){
+        return
+      }
+      const chatType = data.chatType;
+      if(chatType == null){
+        return;
+      }
+
+      if(chatType == 1){ // 单聊
+        // 刷新左侧好友消息列表
+        this.getLastMes()
+      }else if(chatType == 2){ // 群聊
+        setTimeout(() => {
+          // 延迟 刷新左侧好友消息列表 （如果直接刷新，服务端缓存还未添加，查出的数据会有问题）
+          this.getLastMes()
+        }, 500)
+      }
     },
 
     // 接收好友上线通知

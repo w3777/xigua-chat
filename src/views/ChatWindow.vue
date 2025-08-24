@@ -739,7 +739,9 @@ export default {
           const message = JSON.parse(mes.getAttribute('message'));
 
           // 如果消息是当前用户发送的且未读
-          if (message.receiverId == this.currentUser.id && message.isRead == false) {
+          if (message.chatType === 1 && message.receiverId == this.currentUser.id && message.isRead == false) {
+            this.visibleUnReadMessages.add(message.chatMessageId);
+          }else if(message.chatType === 2 && message.receiverId == this.currentChatWindow.chatId && message.isRead == false){
             this.visibleUnReadMessages.add(message.chatMessageId);
           }
         }
@@ -759,6 +761,7 @@ export default {
         senderId: this.currentUser.id,
         receiverId: this.currentChatWindow.chatId,
         message: JSON.stringify(Array.from(this.visibleUnReadMessages)),
+        chatType: this.currentChatWindow.chatType,
         messageType: 'chat',
         subType:'submit_unread'
       }))
