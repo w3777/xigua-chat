@@ -41,12 +41,13 @@
           </div>
         </div>
 
-        <!--      <div v-if="loading" class="loading-more">-->
-        <!--        加载中...-->
-        <!--      </div>-->
-        <!--      <div v-if="noMoreData" class="no-more-data">-->
-        <!--        没有更多数据了-->
-        <!--      </div>-->
+        <!-- 加载更多提示 -->
+        <div v-if="loading" class="loading-more">
+          加载中...
+        </div>
+<!--        <div v-if="showNoMoreData" class="no-more-data">-->
+<!--          没有更多数据了-->
+<!--        </div>-->
       </div>
     </div>
 
@@ -100,6 +101,15 @@ export default {
       webSocket: null, // WebSocket实例,
       chatMessages: [],
       currentUser: {},
+      pageNum: 1,           // 当前页码
+      pageSize: 20,         // 每页条数
+      hasMore: true,        // 是否还有更多数据
+      showNoMoreData: false, // 是否显示"没有更多数据"提示
+      noMoreDataTimer: null, // 提示消失计时器
+      loading: false,       // 是否正在加载
+      isScrollingUp: false, // 是否向上滚动
+      lastScrollTop: 0,     // 上次滚动位置
+      loadedPages: new Set(),
     }
   },
   async created() {
@@ -136,18 +146,64 @@ export default {
     },
 
     // 分页获取左侧好友列表
-    getLastMes() {
+    async getLastMes() {
+      if (this.loading || !this.hasMore) return;
+
+      this.loading = true;
       const data = {
-        pageNum: 1,
-        pageSize: 10
+        pageNum: this.pageNum,
+        pageSize: this.pageSize
       }
-      return getLastMes(data).then(res => {
-        this.messages = res.data.rows;
-      })
+
+      try {
+        const res = await getLastMes(data);
+        if (res.data.rows && res.data.rows.length > 0) {
+          // 如果是第一页，直接替换
+          if (this.pageNum === 1) {
+            this.messages = res.data.rows;
+          } else {
+            // 后续页追加数据
+            this.messages = [...this.messages, ...res.data.rows];
+          }
+
+          // 更新分页状态
+          this.hasMore = this.pageNum < res.data.totalPage;
+
+          // 记录已加载页码
+          this.loadedPages.add(this.pageNum);
+        } else {
+          this.hasMore = false;
+        }
+      } catch (error) {
+        console.error("加载消息列表失败:", error);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // 显示"没有更多数据"提示
+    showNoMoreDataTip() {
+      this.showNoMoreData = true;
+
+      // 清除之前的计时器
+      if (this.noMoreDataTimer) {
+        clearTimeout(this.noMoreDataTimer);
+      }
+
+      // 2秒后自动隐藏
+      this.noMoreDataTimer = setTimeout(() => {
+        this.showNoMoreData = false;
+      }, 2000);
     },
 
     // 加载聊天
     async initChat(chatId){
+      // 重置分页状态
+      this.pageNum = 1;
+      this.hasMore = true;
+      this.showNoMoreData = false;
+      this.loadedPages.clear();
+
       await this.getLastMes().then(() => {
         // 如果有好友ID，则锁定聊天窗口
         if(chatId != null){
@@ -308,7 +364,41 @@ export default {
 
     // 滚动事件处理
     messageScroll(event) {
-      // todo 按滚动做分页查询
+      const container = event.target;
+      const scrollTop = container.scrollTop;
+
+      // 判断滚动方向
+      this.isScrollingUp = scrollTop < this.lastScrollTop;
+      this.lastScrollTop = scrollTop;
+
+      // 如果向上滚动或正在加载或无更多数据，则返回
+      if (this.isScrollingUp || this.loading || !this.hasMore){
+        return;
+      }
+
+      // 如果是向下滚动且没有更多数据，显示提示
+      if (!this.isScrollingUp && !this.hasMore) {
+        this.showNoMoreDataTip();
+        return;
+      }
+
+      // 检查是否需要加载更多
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+
+      // 距离底部100px时触发加载
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        this.loadMoreMessages();
+      }
+    },
+
+    // 加载更多消息
+    async loadMoreMessages() {
+      // 防止重复加载同一页
+      if (this.loadedPages.has(this.pageNum + 1)) return;
+
+      this.pageNum++;
+      await this.getLastMes();
     },
 
     // 格式化时间
@@ -690,6 +780,48 @@ export default {
   margin-left: 12px;
 }
 
+.loading-more, .no-more-data {
+  padding: 15px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.loading-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 加载动画 */
+.loading-more::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #07C160;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 添加动画效果 */
+.no-more-data {
+  animation: fadeInOut 2s ease-in-out;
+  opacity: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
 /* 群聊标签样式 */
 .group-tag {
   display: inline-block;
@@ -701,6 +833,37 @@ export default {
   color: #7239EA;
   background-color: rgba(114, 57, 234, 0.1);
   border: 1px solid rgba(114, 57, 234, 0.3);
+}
+
+/* 新增加载样式 */
+.loading-more, .no-more-data {
+  padding: 15px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.loading-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 加载动画 */
+.loading-more::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #07C160;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 </style>
