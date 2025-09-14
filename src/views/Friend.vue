@@ -154,9 +154,9 @@
         <i class="icon-friend"></i> 查看详情
       </div>
       <div class="menu-divider"></div>
-      <div class="menu-item" @click="handleFriendRightClickMenu('delete')">
-        <i class="icon-delete"></i> 删除好友
-      </div>
+<!--      <div class="menu-item" @click="handleFriendRightClickMenu('delete')">-->
+<!--        <i class="icon-delete"></i> 删除好友-->
+<!--      </div>-->
     </div>
 
     <!-- 群组右键菜单 -->
@@ -171,9 +171,9 @@
         <i class="icon-group"></i> 查看详情
       </div>
       <div class="menu-divider"></div>
-      <div class="menu-item" @click="handleGroupRightClickMenu('delete')">
-        <i class="icon-delete"></i> 删除群组
-      </div>
+<!--      <div class="menu-item" @click="handleGroupRightClickMenu('delete')">-->
+<!--        <i class="icon-delete"></i> 删除群组-->
+<!--      </div>-->
     </div>
   </div>
 </template>

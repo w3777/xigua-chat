@@ -82,6 +82,17 @@
           </div>
         </div>
       </div>
+
+      <!-- 系统消息 -->
+      <div
+          v-for="systemMsg in systemMessages"
+          :key="`${systemMsg.senderId}_${systemMsg.createTime}`"
+          class="system-message"
+      >
+        <div class="system-message-content">
+          {{ systemMsg.message }}
+        </div>
+      </div>
     </div>
 
     <div class="input-container">
@@ -161,7 +172,8 @@ export default {
       showChatWindow: false,
       newMessage: '', // 输入框内容
       webSocket: null, // WebSocket实例,
-      chatMessages: [],
+      chatMessages: [], // 聊天消息
+      systemMessages: [], // 系统消息
       currentUser: {},
       historyPageNum: 1, // 当前页码（从1开始）
       historyPageSize: 20, // 每页条数
@@ -294,6 +306,8 @@ export default {
         this.receiveMessageSendAck(data);
       }else if(messageType == 'chat' && subType == 'mes_read'){ // 消息已读通知
         this.receiveMessageReadNotify(data);
+      }else if(messageType == 'chat' && subType == 'system_mes'){ // 系统消息
+        this.receiveSystemMessage(data);
       }
     },
 
@@ -673,6 +687,7 @@ export default {
     // 清空历史消息所需要的参数
     clearHistoryMes(){
       this.chatMessages = [];
+      this.systemMessages = [];
       this.historyPageNum = 1;
       this.historyPageSize = 20;
       this.hasMoreHistory = false;
@@ -768,6 +783,19 @@ export default {
 
       // 清空集合
       this.visibleUnReadMessages.clear();
+    },
+
+    // 接收系统消息
+    receiveSystemMessage(systemMsg){
+      console.log(systemMsg)
+      // 添加到系统消息数组
+      this.systemMessages.push(systemMsg);
+      console.log(this.systemMessages)
+
+      // 滚动到底部
+      this.$nextTick(() => {
+        this.scrollToBottom();
+      });
     },
   }
 }
@@ -1247,6 +1275,24 @@ export default {
 /* 旋转动画 */
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* 系统消息样式 */
+.system-message {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0;
+  padding: 0 20px;
+}
+
+.system-message-content {
+  color: #999999;
+  font-size: 13px;
+  text-align: center;
+  max-width: 80%;
+  word-break: break-word;
+  line-height: 1.4;
+  opacity: 0.9;
 }
 
 </style>

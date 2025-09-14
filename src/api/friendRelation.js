@@ -41,3 +41,11 @@ export function getFriendDetail(friendId) {
         method: 'get'
     })
 }
+
+// 删除好友
+export function delFriend(friendId) {
+    return request({
+        url: 'client/friend/relation/delFriend?friendId=' + friendId,
+        method: 'post'
+    })
+}

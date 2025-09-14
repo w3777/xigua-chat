@@ -73,7 +73,7 @@
 </template>
 
 <script>
-import { getFriendDetail } from '@/api/friendRelation.js'
+import {delFriend, getFriendDetail} from '@/api/friendRelation.js'
 import {set} from "@/utils/localStorage.js";
 
 export default {
@@ -123,15 +123,32 @@ export default {
       })
     },
 
-    deleteFriend(friend) {
+    // 删除好友
+    deleteFriend() {
+      const friend = this.friendDetail;
+      if (!friend) {
+        this.$message.error('请先获取好友详情');
+        return;
+      }
+
       // 删除好友逻辑
       this.$confirm(`确定要删除好友 ${friend.username} 吗?`, '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        // 调用删除好友API
-        console.log('删除好友:', friend.id)
+        delFriend(friend.userId).then(response => {
+          if (response.code === 200) {
+            this.$message.success('删除好友成功');
+            // 刷新好友列表
+            this.$parent.getContactCount();
+            this.$parent.getFriendList();
+            // 关闭详情页
+            this.closeDetail();
+          }else{
+            this.$message.error('删除好友失败')
+          }
+        })
         // 成功后刷新好友列表
         this.fetchFriendList()
       }).catch(() => {
