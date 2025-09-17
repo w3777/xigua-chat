@@ -16,6 +16,7 @@
             {{ fullDateInfo }} |
             {{ location }} |
             天气：{{ weather.condition }} {{ weather.emoji }} {{ weather.temp }}℃
+            <span class="user-agent-info">{{ userAgentInfo }}</span>
           </p>
         </div>
       </div>
@@ -45,13 +46,14 @@
           <div class="action-icon" style="color: #07C160;">💬</div>
           <div class="action-text">发起聊天</div>
         </div>
+        <!-- 新增AI聊天入口 -->
+        <div class="action-item" @click="showComingSoon">
+          <div class="action-icon" style="color: #9c27b0;">🤖</div>
+          <div class="action-text">AI聊天</div>
+        </div>
         <div class="action-item" @click="goTo('/friend', 'friend')">
           <div class="action-icon" style="color: #576B95;">👥</div>
           <div class="action-text">联系人</div>
-        </div>
-        <div class="action-item" @click="showComingSoon">
-          <div class="action-icon" style="color: #FFCD00;">🌍</div>
-          <div class="action-text">发现</div>
         </div>
         <div class="action-item" @click="goTo('/profile', 'profile')">
           <div class="action-icon" style="color: #FF9500;">👤</div>
@@ -167,6 +169,7 @@
 import { getLocation, getWeather } from "@/api/thirdParty.js";
 import {getObject, set} from "@/utils/localStorage.js";
 import {getHomeCount} from "@/api/home.js";
+import { UAParser } from 'ua-parser-js';
 export default {
   name: 'Home',
   data() {
@@ -179,6 +182,7 @@ export default {
         emoji: '',
         temp: ''
       },
+      userAgentInfo: '', // 用户代理信息
       currentUser: {},
       homeCount: {
         friendCount: 0,
@@ -282,7 +286,50 @@ export default {
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 1)
       const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7)
       return `${start.getMonth() + 1}.${start.getDate()} - ${end.getMonth() + 1}.${end.getDate()}`
-    }
+    },
+
+    // 解析userAgent
+    parseUserAgent() {
+      try {
+        const parser = new UAParser(navigator.userAgent);
+        const result = parser.getResult();
+
+        // 获取浏览器信息和版本
+        const browserName = result.browser.name || '未知浏览器';
+        const browserVersion = result.browser.version ? result.browser.version.split('.')[0] : '';
+
+        // 获取操作系统信息和版本
+        const osName = result.os.name || '未知系统';
+        const osVersion = result.os.version ? result.os.version.split('.')[0] : '';
+
+        // 格式化显示
+        const browserDisplay = browserVersion ? `${browserName} ${browserVersion}` : browserName;
+        const osDisplay = osVersion ? `${osName} ${osVersion}` : osName;
+
+        this.userAgentInfo = `${browserDisplay} | ${osDisplay}`;
+
+      } catch (error) {
+        console.error('解析 UserAgent 失败:', error);
+
+        // 降级方案：使用简单检测
+        const ua = navigator.userAgent;
+        let browser = '未知浏览器';
+        let os = '未知系统';
+
+        if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+        else if (ua.includes('Firefox')) browser = 'Firefox';
+        else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+        else if (ua.includes('Edg')) browser = 'Edge';
+
+        if (ua.includes('Windows')) os = 'Windows';
+        else if (ua.includes('Mac')) os = 'macOS';
+        else if (ua.includes('Linux')) os = 'Linux';
+        else if (ua.includes('Android')) os = 'Android';
+        else if (ua.includes('like Mac')) os = 'iOS';
+
+        this.userAgentInfo = `${browser} | ${os}`;
+      }
+    },
   },
   mounted() {
     this.timer = setInterval(() => {
@@ -291,6 +338,8 @@ export default {
     this.getLocation().then(() => {
       this.getWeather()
     })
+
+    this.parseUserAgent();
   },
   beforeDestroy() {
     clearInterval(this.timer)
@@ -336,6 +385,11 @@ export default {
   margin: 0;
   font-size: 14px;
   color: #888;
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* 时钟样式 */
@@ -774,4 +828,11 @@ export default {
   background-color: #e0e0e0;
   border-radius: 3px;
 }
+
+.user-agent-info {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 12px;
+}
+
 </style>

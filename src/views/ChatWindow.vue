@@ -68,7 +68,7 @@
 
             <!-- 群聊已读未读后续再写 -->
             <!-- 发送成功（已读/未读） -->
-            <span v-else-if="message.chatType == 1 && message.senderId === currentUser.id && message.sendStatus === 'success'" class="read-status">
+            <span v-else-if="message.chatType == 1 && message.senderId === currentUser.id" class="read-status">
               {{ message.isRead ? '已读' : '未读' }}
             </span>
           </div>
