@@ -23,10 +23,10 @@ service.interceptors.request.use(config => {
     let token = '';
 
     // 检查当前请求是否在白名单中
-    const isWhiteList = whiteList.some(path => config.url.includes(path));
+    const isWhite = whiteList.some(path => config.url.includes(path));
 
     // 如果需要token（不在白名单中）
-    if (!isWhiteList) {
+    if (!isWhite) {
         const token = getToken();
         if (!token) {
             // 如果未登录且不是白名单路由，跳转到登录页

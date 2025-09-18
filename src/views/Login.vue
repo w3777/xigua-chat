@@ -73,7 +73,7 @@ export default {
           // 缓存token
           setToken(loginRes.data.token)
         } catch (error) {
-          this.$message.error('登录失败：' + error.message);
+          return
         } finally {
           this.loading = false;
         }
