@@ -42,6 +42,23 @@
           </div>
         </div>
 
+        <!-- 机器人列表 -->
+        <div class="dropdown-section">
+          <div class="dropdown-header" @click="toggleBotDropdown('bots')">
+            <span>机器人 ({{ botCount }})</span>
+            <span class="arrow">{{ dropdowns.bots ? '▼' : '▶' }}</span>
+          </div>
+          <div class="dropdown-content" v-show="dropdowns.bots">
+            <div class="contact-item" v-for="bot in bots" :key="bot.id">
+              <div class="avatar-placeholder" v-if="!bot.avatar">
+                {{ bot.name && bot.name.charAt(0) }}
+              </div>
+              <img v-else :src="bot.avatar" class="avatar" alt="机器人头像">
+              <span class="name">{{ bot.name }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 发送的好友申请列表 -->
         <div class="dropdown-section">
           <div class="dropdown-header" @click="toggleSendFriendRequestDropdown('sendFriendRequest')">
@@ -179,7 +196,14 @@
 </template>
 
 <script>
-import {getContactCount, getFriendList, getGroupList, getReceiveFriendRequestList, getSendFriendRequestList} from "@/api/contact.js";
+import {
+  getBotList,
+  getContactCount,
+  getFriendList,
+  getGroupList,
+  getReceiveFriendRequestList,
+  getSendFriendRequestList
+} from "@/api/contact.js";
 import { friendVerify } from '@/api/friendRelation.js'
 import FriendDetail from "@/views/FriendDetail.vue";
 import GroupDetail from "@/views/GroupDetail.vue";
@@ -193,15 +217,18 @@ export default {
       dropdowns: {
         friends: false,
         groups: false,
+        bots: false,
         sendFriendRequest: false,
         receiveFriendRequest: false,
       },
       friendCount: 0,
       groupCount: 0,
+      botCount: 0,
       sendCount: 0,
       receiveCount: 0,
       friends: [],
       groups: [],
+      bots: [],
       sendFriendRequests: [],
       receiveFriendRequests: [],
       unreadRequests: 0,
@@ -242,6 +269,7 @@ export default {
       if (res.code === 200) {
         this.friendCount = res.data.friendCount;
         this.groupCount = res.data.groupCount;
+        this.botCount = res.data.botCount;
         this.sendCount = res.data.sendCount;
         this.receiveCount = res.data.receiveCount;
       }
@@ -263,6 +291,14 @@ export default {
       }
     },
 
+    // 获取机器人列表
+    async getBotList() {
+      const res = await getBotList();
+      if (res.code === 200) {
+        this.bots = res.data;
+      }
+    },
+
     // 展开好友下拉列表
     toggleFriendDropdown(type) {
       this.toggleDropdown(type);
@@ -280,6 +316,16 @@ export default {
       // 展开群聊下拉表表时，获取群聊列表数据
       if(this.dropdowns.groups == true){
         this.getGroupList();
+      }
+    },
+
+    // 展开群聊下拉列表
+    toggleBotDropdown(type) {
+      this.toggleDropdown(type);
+
+      // 展开群聊下拉表表时，获取群聊列表数据
+      if(this.dropdowns.bots == true){
+        this.getBotList();
       }
     },
 

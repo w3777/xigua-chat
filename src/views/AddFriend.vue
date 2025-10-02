@@ -19,6 +19,13 @@
           >
             创建群聊
           </div>
+          <div
+              class="tab-item"
+              :class="{active: activeTab === 'robot'}"
+              @click="switchTab('robot')"
+          >
+            创建机器人
+          </div>
         </div>
         <div class="dialog-close" @click="closeDialog">×</div>
       </div>
@@ -113,16 +120,96 @@
           </button>
         </div>
       </div>
+
+      <!-- 创建机器人卡片 -->
+      <div class="card-content" v-show="activeTab === 'robot'">
+        <el-form
+            :model="robotForm"
+            :rules="robotRules"
+            ref="robotFormRef"
+            class="robot-creation-form"
+        >
+          <!-- 头像上传区域 -->
+          <div class="avatar-upload-section">
+            <div class="avatar-upload-label">机器人头像</div>
+            <div class="avatar-upload-area">
+              <div class="avatar-preview" @click="triggerAvatarUpload">
+                <img v-if="robotForm.avatar" :src="robotForm.avatar" alt="头像预览" class="avatar-image">
+                <div v-else class="avatar-placeholder">
+                  <i class="upload-icon">+</i>
+                  <span>点击上传头像</span>
+                </div>
+                <input
+                    type="file"
+                    ref="avatarInput"
+                    @change="handleAvatarUpload"
+                    accept="image/*"
+                    class="avatar-input"
+                >
+              </div>
+              <div class="avatar-tips">建议尺寸 120×120 px，支持 JPG、PNG 格式</div>
+            </div>
+          </div>
+
+          <!-- 名称 -->
+          <el-form-item prop="name">
+            <label>机器人名称 <span class="required">*</span></label>
+            <el-input
+                v-model="robotForm.name"
+                placeholder="请输入机器人名称（2-20字符）"
+                maxlength="20"
+                show-word-limit
+            />
+          </el-form-item>
+
+          <!-- 描述 -->
+          <el-form-item prop="description">
+            <label>机器人描述 <span class="required">*</span></label>
+            <el-input
+                v-model="robotForm.description"
+                placeholder="简要描述机器人的功能和特点（5-50字符）"
+                maxlength="50"
+                show-word-limit
+            />
+          </el-form-item>
+
+          <!-- 提示词 -->
+          <el-form-item prop="prompt">
+            <label>系统提示词 <span class="required">*</span></label>
+            <el-input
+                v-model="robotForm.prompt"
+                type="textarea"
+                placeholder="例如：你是一个专业的客服助手，回答要友好、专业且简洁。请用中文回答用户问题..."
+                maxlength="500"
+                :rows="4"
+                show-word-limit
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+                class="create-robot-btn"
+                @click="createRobot"
+                type="primary"
+            >
+              <i class="btn-icon">🤖</i>
+              创建机器人
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import { getListByName } from "@/api/user.js";
+import {getListByName, uploadAvatar} from "@/api/user.js";
 import { sendFriendRequest } from "@/api/friendRelation.js";
 import { getFriendList } from "@/api/contact.js";
 import { createGroup } from "@/api/group.js";
 import { getObject} from "@/utils/localStorage.js";
+import {uploadFile} from "@/api/file.js";
+import {createBot} from "@/api/bot.js";
 
 export default {
   data() {
@@ -134,7 +221,30 @@ export default {
       isSearching: false,
       // 创建群聊相关数据
       friends: [],
-      selectedMembers: []
+      selectedMembers: [],
+      robotForm: {
+        name: '',
+        avatar: '',
+        description: '',
+        prompt: ''
+      },
+      selectedAvatarFile: null,
+      robotFormRef: null,
+      // 表单验证规则
+      robotRules: {
+        name: [
+          { required: true, message: '请输入机器人名称', trigger: 'blur' },
+          { min: 2, max: 20, message: '机器人名称长度为 2 到 20 个字符', trigger: 'blur' }
+        ],
+        description: [
+          { required: true, message: '请输入机器人描述', trigger: 'blur' },
+          { min: 5, max: 50, message: '机器人描述长度为 5 到 50 个字符', trigger: 'blur' }
+        ],
+        prompt: [
+          { required: true, message: '请输入系统提示词', trigger: 'blur' },
+          { min: 10, message: '提示词至少需要 10 个字符', trigger: 'blur' }
+        ]
+      }
     }
   },
   computed: {
@@ -250,6 +360,88 @@ export default {
         this.$parent.getLastMes();
       }, 500);
     },
+
+    triggerAvatarUpload() {
+      // this.$refs.avatarInput?.click();
+    },
+
+    async handleAvatarUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 验证文件类型
+      if (!file.type.startsWith('image/')) {
+        this.$message.error('请选择图片文件');
+        return;
+      }
+
+      // 验证文件大小
+      if (file.size > 2 * 1024 * 1024) {
+        this.$message.error('图片大小不能超过 2MB');
+        return;
+      }
+
+      try {
+        // 显示预览
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.robotForm.avatar = e.target.result; // 预览用base64
+        };
+        reader.readAsDataURL(file);
+
+        // 存储文件对象用于后续上传
+        this.selectedAvatarFile = file;
+
+      } catch (error) {
+        console.error('图片预览失败:', error);
+        this.$message.error('图片预览失败');
+      }
+    },
+
+    async createRobot() {
+      // 表单验证
+      const valid = await this.$refs.robotFormRef.validate();
+      if (!valid) return;
+
+      let avatarUrl = '';
+
+      // 如果有选择新头像，先上传图片
+      if (this.selectedAvatarFile) {
+        const uploadResponse = await uploadFile(this.selectedAvatarFile);
+        if (uploadResponse.code !== 200) {
+          this.$message.error('头像上传失败');
+          return;
+        }
+        avatarUrl = uploadResponse.data;
+      }
+
+      // 提交机器人创建数据
+      const robotData = {
+        name: this.robotForm.name.trim(),
+        avatar: avatarUrl || this.robotForm.avatar,
+        description: this.robotForm.description.trim(),
+        prompt: this.robotForm.prompt.trim()
+      };
+
+      const response = await createBot(robotData);
+      if (response.code === 200) {
+        this.$message.success('机器人创建成功');
+        this.closeDialog();
+        this.$emit('robot-created', response.data);
+        this.resetRobotForm();
+      } else {
+        this.$message.error(response.msg || '创建机器人失败');
+      }
+    },
+
+    resetRobotForm() {
+      this.robotForm = {
+        name: '',
+        avatar: '',
+        description: '',
+        prompt: ''
+      };
+    }
   },
   mounted() {
     this.$nextTick(() => {
@@ -683,5 +875,109 @@ export default {
 .create-group-btn:disabled {
   background: #cccccc;
   cursor: not-allowed;
+}
+
+.robot-creation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 头像上传区域 */
+.avatar-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avatar-upload-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.avatar-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.avatar-preview {
+  width: 80px;
+  height: 80px;
+  border: 2px dashed #dcdfe6;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.avatar-preview:hover {
+  border-color: #07C160;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 12px;
+}
+
+.upload-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.avatar-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.avatar-tips {
+  font-size: 12px;
+  color: #999;
+}
+
+.create-robot-btn {
+  margin-top: 16px;
+  padding: 10px 0;
+  background: #07C160;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.create-robot-btn:hover {
+  background: #06AD56;
+}
+
+.btn-icon {
+  font-size: 18px;
 }
 </style>

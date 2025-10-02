@@ -228,6 +228,10 @@ export default {
       if(this.currentUser != null){
         this.currentUser = getObject('userInfo') || {};
       }
+      // todo ai对话暂不查询历史消息
+      if(this.currentChatWindow.chatType == 3){
+        return
+      }
 
       // 清空历史消息所需参数
       this.clearHistoryMes();
@@ -363,6 +367,8 @@ export default {
         this.pushPrivateMessage(data);
       }else if(chatType === 2){
         this.pushGroupMessage(data);
+      }else if (chatType === 3){
+        this.pushAIMessage(data);
       }else{
         return;
       }
@@ -395,6 +401,29 @@ export default {
         message: data.message,
         createTime: this.formatDate(data.createTime),
       });
+    },
+
+    pushAIMessage(data){
+      const existingMessageIndex = this.chatMessages.findIndex(
+          msg => msg.chatMessageId === data.chatMessageId
+      );
+
+      if (existingMessageIndex !== -1) {
+        // 更新现有消息内容（追加模式）
+        this.chatMessages[existingMessageIndex].message += data.message;
+        this.chatMessages[existingMessageIndex].createTime = this.formatDate(data.createTime);
+      } else {
+        // 添加新消息
+        this.chatMessages.push({
+          chatMessageId: data.chatMessageId,
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          messageType: data.messageType,
+          chatType: this.currentChatWindow.chatType,
+          message: data.message,
+          createTime: this.formatDate(data.createTime),
+        });
+      }
     },
 
     // 加载更多历史消息
@@ -787,10 +816,8 @@ export default {
 
     // 接收系统消息
     receiveSystemMessage(systemMsg){
-      console.log(systemMsg)
       // 添加到系统消息数组
       this.systemMessages.push(systemMsg);
-      console.log(this.systemMessages)
 
       // 滚动到底部
       this.$nextTick(() => {

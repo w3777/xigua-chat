@@ -38,6 +38,9 @@
             <div v-if="message.chatType === 2" class="group-status">
               <span class="group-tag">群聊</span>
             </div>
+            <div v-if="message.chatType === 3" class="bot-status">
+              <span class="bot-tag">机器人</span>
+            </div>
           </div>
         </div>
 
@@ -780,6 +783,13 @@ export default {
   margin-left: 12px;
 }
 
+.bot-status {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+  margin-left: 12px;
+}
+
 .loading-more, .no-more-data {
   padding: 15px;
   text-align: center;
@@ -833,6 +843,18 @@ export default {
   color: #7239EA;
   background-color: rgba(114, 57, 234, 0.1);
   border: 1px solid rgba(114, 57, 234, 0.3);
+}
+
+.bot-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: normal;
+  line-height: 1;
+  color: #0095FF;
+  background-color: rgba(0, 149, 255, 0.1);
+  border: 1px solid rgba(0, 149, 255, 0.3);
 }
 
 /* 新增加载样式 */

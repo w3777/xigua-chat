@@ -24,6 +24,14 @@ export function getGroupList() {
     })
 }
 
+// 获取机器人列表
+export function getBotList() {
+    return request({
+        url: '/client/contact/getBotList',
+        method: 'get',
+    })
+}
+
 // 获取发送好友申请列表
 export function getSendFriendRequestList() {
     return request({
