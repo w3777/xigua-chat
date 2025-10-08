@@ -8,3 +8,11 @@ export function createBot(data) {
         data: data
     })
 }
+
+// 获取机器人详情
+export function getBotDetail(botId) {
+    return request({
+        url: '/client/bot/getBotDetail?botId=' + botId,
+        method: 'post',
+    })
+}

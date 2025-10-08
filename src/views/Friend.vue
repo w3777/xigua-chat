@@ -49,7 +49,7 @@
             <span class="arrow">{{ dropdowns.bots ? '▼' : '▶' }}</span>
           </div>
           <div class="dropdown-content" v-show="dropdowns.bots">
-            <div class="contact-item" v-for="bot in bots" :key="bot.id">
+            <div class="contact-item" v-for="bot in bots" :key="bot.id" @contextmenu.prevent="showBotClickMenu($event, bot.id)">
               <div class="avatar-placeholder" v-if="!bot.avatar">
                 {{ bot.name && bot.name.charAt(0) }}
               </div>
@@ -155,8 +155,15 @@
         </div>
       </div>
 
+      <!-- 右侧机器人详情 -->
+      <div :class="{'detail-container': showBotDetail}">
+        <div :class="{'right-content': showBotDetail}">
+          <BotDetail v-if="showBotDetail" ref="botDetail" @close="closeBotDetail" />
+        </div>
+      </div>
+
       <!-- 欢迎页 -->
-      <WelcomeWelcome v-if="showFriendDetail == false && showGroupDetail == false"></WelcomeWelcome>
+      <WelcomeWelcome v-if="showFriendDetail == false && showGroupDetail == false && showBotDetail == false"></WelcomeWelcome>
     </div>
 
     <!-- 好友右键菜单 -->
@@ -192,6 +199,21 @@
 <!--        <i class="icon-delete"></i> 删除群组-->
 <!--      </div>-->
     </div>
+
+    <!-- 机器人右键菜单 -->
+    <div class="right-click-menu"
+         v-show="botRightClickMenu.visible"
+         :style="{ top: botRightClickMenu.top + 'px', left: botRightClickMenu.left + 'px' }"
+         @mouseleave="hideBotRightClickMenu">
+      <div class="menu-item" @click="handleBotRightClickMenu('chat')">
+        <i class="icon-message"></i> 发消息
+      </div>
+      <div class="menu-item" @click="handleBotRightClickMenu('detail')">
+        <i class="icon-group"></i> 查看详情
+      </div>
+      <div class="menu-divider"></div>
+    </div>
+
   </div>
 </template>
 
@@ -207,6 +229,7 @@ import {
 import { friendVerify } from '@/api/friendRelation.js'
 import FriendDetail from "@/views/FriendDetail.vue";
 import GroupDetail from "@/views/GroupDetail.vue";
+import BotDetail from "@/views/BotDetail.vue";
 import {getFriendDetail} from "@/api/friendRelation.js";
 import {set} from "@/utils/localStorage.js";
 import WelcomeWelcome from "@/components/WelcomeWelcome.vue";
@@ -246,6 +269,13 @@ export default {
         left: 0,
         groupId:null
       },
+      showBotDetail: false, // 机器人详情
+      botRightClickMenu: {
+        visible: false,
+        top: 0,
+        left: 0,
+        botId:null
+      },
     }
   },
   created() {
@@ -255,6 +285,7 @@ export default {
   components: {
     FriendDetail,
     GroupDetail,
+    BotDetail,
     WelcomeWelcome
   },
   methods: {
@@ -343,6 +374,9 @@ export default {
     openFriendDetail(friendId) {
       if(this.showGroupDetail){
         this.showGroupDetail = false;
+      }
+      if(this.showBotDetail){
+        this.showBotDetail = false;
       }
       this.showFriendDetail = true;
 
@@ -433,6 +467,9 @@ export default {
       if(this.showFriendDetail){
         this.showFriendDetail = false;
       }
+      if(this.showBotDetail){
+        this.showBotDetail = false;
+      }
       this.showGroupDetail = true;
 
       this.$nextTick(() => {
@@ -446,6 +483,61 @@ export default {
     // 关闭群组详情
     closeGroupDetail() {
       this.showGroupDetail = false;
+    },
+
+
+    showBotClickMenu(event, botId) {
+      this.botRightClickMenu = {
+        visible: true,
+        top: event.clientY,
+        left: event.clientX,
+        botId: botId
+      }
+      // 点击其他地方关闭菜单
+      document.addEventListener('click', this.hideBotRightClickMenu)
+    },
+
+    hideBotRightClickMenu() {
+      this.botRightClickMenu.visible = false
+      document.removeEventListener('click', this.hideBotRightClickMenu)
+    },
+
+    handleBotRightClickMenu(action) {
+      this.hideBotRightClickMenu()
+      if (!this.botRightClickMenu.botId) return
+
+      const botId = this.botRightClickMenu.botId
+      switch(action) {
+        case 'chat':
+          this.startChat(botId)
+          break
+        case 'detail':
+          this.openBotDetail(botId)
+          break
+      }
+    },
+
+    // 打开群组详情
+    openBotDetail(botId) {
+      if(this.showFriendDetail){
+        this.showFriendDetail = false;
+      }
+      if(this.showGroupDetail){
+        this.showGroupDetail = false;
+      }
+      this.showBotDetail = true;
+
+      this.$nextTick(() => {
+        if (this.$refs.botDetail) {
+          // 调用子组件方法
+          this.$refs.botDetail.getBotDetail(botId);
+        }
+      });
+    },
+
+    // 关闭群组详情
+    closeBotDetail() {
+      this.showBotDetail = false;
     },
 
     // 展开发送好友申请下拉列表

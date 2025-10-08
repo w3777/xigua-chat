@@ -32,6 +32,7 @@
         <div v-if="message.senderId !== currentUser.id" class="avatar-container">
           <div class="message-avatar">
             <img v-if="message.chatType == 1 && currentChatWindow.avatar" :src="currentChatWindow.avatar" :alt="currentChatWindow.chatName">
+            <img v-if="message.chatType == 3 && currentChatWindow.avatar" :src="currentChatWindow.avatar" :alt="currentChatWindow.chatName">
             <img v-else-if="message.chatType == 2" :src="message.sender.avatar" :alt="message.chatName">
             <span v-else>{{ currentChatWindow && currentChatWindow.chatName ? currentChatWindow.chatName[0] : '' }}</span>
           </div>
@@ -411,7 +412,6 @@ export default {
       if (existingMessageIndex !== -1) {
         // 更新现有消息内容（追加模式）
         this.chatMessages[existingMessageIndex].message += data.message;
-        this.chatMessages[existingMessageIndex].createTime = this.formatDate(data.createTime);
       } else {
         // 添加新消息
         this.chatMessages.push({
